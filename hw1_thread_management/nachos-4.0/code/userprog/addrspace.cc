@@ -51,7 +51,7 @@ SwapHeader (NoffHeader *noffH)
 //----------------------------------------------------------------------
 
 // TODO, Initialize Data structure that help record status of physical memory
-bool AddrSpace::isPhyPageFree[NumPhysPages] = {true};
+bool AddrSpace::isPhyPageUsed[NumPhysPages] = {false};
 unsigned int AddrSpace::numFreePhyPage = NumPhysPages;
 
 AddrSpace::AddrSpace()
@@ -81,18 +81,16 @@ AddrSpace::~AddrSpace()
 {
     // TODO, need to release physical pages that occupied by process
     for (unsigned int i = 0; i < numPages; i++) {
-      	if (isPhyPageFree[pageTable[i].physicalPage] == false){
-            isPhyPageFree[pageTable[i].physicalPage] = true;
+      	if (isPhyPageUsed[pageTable[i].physicalPage] == true){
+            isPhyPageUsed[pageTable[i].physicalPage] = false;
             numFreePhyPage++;
         }
-        // Clean the physical page content? // TODO TODO TODO?
     }
     delete pageTable;
 }
 
 
 // TODO Implement translattion
-
 int AddrSpace::VirtoPhys(int v_addr){
     return pageTable[v_addr/PageSize].physicalPage*PageSize + v_addr%PageSize; 
 }
@@ -124,33 +122,39 @@ AddrSpace::Load(char *fileName)
     	SwapHeader(&noffH);
     ASSERT(noffH.noffMagic == NOFFMAGIC);
 
-// how big is address space?
+    // how big is address space?
     size = noffH.code.size + noffH.initData.size + noffH.uninitData.size 
 			+ UserStackSize;	// we need to increase the size
 						// to leave room for the stack
     numPages = divRoundUp(size, PageSize);
-//	cout << "number of pages of " << fileName<< " is "<<numPages<<endl;
+    cout << "number of pages of " << fileName<< " is "<<numPages<<endl;
+    //cout << "noffH.code.size = " << noffH.code.size << endl;
+    //cout << "noffH.initData.size = " << noffH.initData.size << endl;
+    //cout << "noffH.uninitData.size = " << noffH.uninitData.size << endl;
+    //cout << "UserStackSize = " << UserStackSize << endl;
     size = numPages * PageSize;
 
     // TODO, check free physical page is enough for this process
     ASSERT(numPages <= numFreePhyPage);
-    
+    // cout << "numFreePhyPage = " << numFreePhyPage << endl;
+     
     // TODO, Update pagetable of this process, and only allocate free physical page to it.
     for (unsigned int i = 0; i < numPages; i++) {
       	pageTable[i].virtualPage = i;
         // Find a free up physical page by linear search
         for (unsigned int j = 0; j < NumPhysPages; j++){
-            if (isPhyPageFree[j]){
+            if (not isPhyPageUsed[j]){
                 // Allocate physical page to this visual page
                 pageTable[i].physicalPage = j;
-                isPhyPageFree[j] = false;
+                isPhyPageUsed[j] = true;
                 numFreePhyPage--;
                 break;
-            }
+            };
         }
         pageTable[i].valid = TRUE;
     }
-     
+    cout << "numFreePhyPage after allocate = " << numFreePhyPage << endl;
+    
     DEBUG(dbgAddr, "Initializing address space: " << numPages << ", " << size);
 
 // then, copy in the code and data segments into memory
@@ -158,7 +162,7 @@ AddrSpace::Load(char *fileName)
         DEBUG(dbgAddr, "Initializing code segment.");
 	DEBUG(dbgAddr, noffH.code.virtualAddr << ", " << noffH.code.size);
         // TODO need to translate virtualAddr to PhyiscalAddr
-        	executable->ReadAt(
+        executable->ReadAt(
 		&(kernel->machine->mainMemory[VirtoPhys(noffH.code.virtualAddr)]), 
 			noffH.code.size, noffH.code.inFileAddr);
     }

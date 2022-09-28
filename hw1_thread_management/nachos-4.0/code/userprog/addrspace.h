@@ -17,7 +17,7 @@
 #include "filesys.h"
 #include <string.h>
 
-#define UserStackSize		1024 	// increase this as necessary!
+#define UserStackSize	1024	 	// increase this as necessary!
 
 class AddrSpace {
   public:
@@ -38,7 +38,7 @@ class AddrSpace {
     // TODO, add numFreePhyPage to keep track of number of free pages
     static unsigned int numFreePhyPage;
     // TODO, add isPhyPageFree to record the status of every physical pages.
-    static bool isPhyPageFree[NumPhysPages];
+    static bool isPhyPageUsed[NumPhysPages];
 
     int VirtoPhys(int virtualAddr);     // Translate virtual address to phyiscal 
        
