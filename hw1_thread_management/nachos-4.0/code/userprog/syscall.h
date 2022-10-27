@@ -30,6 +30,9 @@
 #define SC_ThreadFork	9
 #define SC_ThreadYield	10
 #define SC_PrintInt	11
+//TODO add a new system call for Sleep()
+#define SC_Sleep	12
+
 
 #ifndef IN_ASM
 
@@ -128,6 +131,8 @@ void ThreadFork(void (*func)());
 void ThreadYield();		
 
 void PrintInt(int number);	//my System Call
+// TODO Declare sleep system call
+void Sleep(int number);
 #endif /* IN_ASM */
 
 #endif /* SYSCALL_H */

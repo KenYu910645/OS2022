@@ -20,10 +20,69 @@
 //		occur at random, instead of fixed, intervals.
 //----------------------------------------------------------------------
 
+//TODO, implement constructor of SleepThread
+SleepThread::SleepThread(Thread* thread, int x, int count_int){
+    this->thread = thread;
+    this->wakeUpTime = count_int + x;
+}
+
+// TODO, put to threads to sleep list
+void SleepThreadManager::PutToSleep(Thread* thread, int x){
+    // Put this thread into sleep list
+    SleepingThreadList.push_back(SleepThread(thread, x, count_int));
+    // defined in threads/threads.cc
+    thread->Sleep(false);
+    cout << "Put thread into sleep when count_int = " << count_int << endl;
+}
+
+// TODO, Wake up threads if their wakeUpTime is up
+void SleepThreadManager::CheckAndWakeUp(){
+    // Increment interrupt counter
+    count_int++;
+    // Search thread that should be waken 
+    for (std::list<SleepThread>::iterator it = SleepingThreadList.begin(); it != SleepingThreadList.end();){
+        // Wake up threads
+        if (count_int >= it->wakeUpTime){
+            kernel->scheduler->ReadyToRun(it->thread);
+            cout << "Woke up thread at count_int = " << count_int << endl;
+            // pop out threads that are already waken
+            it = SleepingThreadList.erase(it);
+        }
+        else {it++;}
+    }
+}
+
+// TODO, constructor of SleepThreadManager
+SleepThreadManager::SleepThreadManager(){
+    count_int = 0;
+}
+
+
 Alarm::Alarm(bool doRandom)
 {
     timer = new Timer(doRandom, this);
+    // TODO, init SleepThreadManager
+    sleepThreadManager = SleepThreadManager();
 }
+
+// TODO implement Alarm::WaitUntil(x)
+void Alarm::WaitUntil(int x){
+    // Disable Interrput temporarily. Defined in machine/interrupt.cc
+    IntStatus level_tmp = kernel->interrupt->SetLevel(IntOff);
+    
+    // Get current thread
+    Thread* thread_cur = kernel->currentThread;
+    
+    // Sleep current thread
+    sleepThreadManager.PutToSleep(thread_cur, x);
+    
+    // Enable Interrput
+    kernel->interrupt->SetLevel(level_tmp);
+}
+
+
+
+
 
 //----------------------------------------------------------------------
 // Alarm::CallBack
@@ -51,12 +110,17 @@ Alarm::CallBack()
 {
     Interrupt *interrupt = kernel->interrupt;
     MachineStatus status = interrupt->getStatus();
-    
-    if (status == IdleMode) {	// is it time to quit?
-        if (!interrupt->AnyFutureInterrupts()) {
+    // TODO, increment counter and check if threads need to wake up
+    sleepThreadManager.CheckAndWakeUp(); 
+    // TODO, if there's thread still sleeping, don't quit 
+    if (status == IdleMode && sleepThreadManager.SleepingThreadList.size() == 0) {	// is it time to quit?
+        // TODO OS will quit, only if program has idled from a while
+        count_idle++;
+        if (!interrupt->AnyFutureInterrupts() and count_idle > 100) {
 	    timer->Disable();	// turn off the timer
 	}
     } else {			// there's someone to preempt
+        count_idle = 0;         // Reset Idle Counter
 	interrupt->YieldOnReturn();
     }
 }

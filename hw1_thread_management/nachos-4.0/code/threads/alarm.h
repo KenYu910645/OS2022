@@ -21,6 +21,33 @@
 #include "utility.h"
 #include "callback.h"
 #include "timer.h"
+#include <list>
+#include "thread.h"
+
+// TODO, define a data structure to store sleeping thread
+class SleepThread{
+    public:
+        // Methods
+        SleepThread(Thread* thread, int x, int count_int);
+        Thread* thread;     // store thread that is sleeping
+        
+        // Variables
+        int wakeUpTime;     // when to wake up the thread
+};
+
+// TODO, define a manager to cope with sleep threads
+class SleepThreadManager{
+    public:
+        // Methods
+        SleepThreadManager();
+        void PutToSleep(Thread* thread, int x); // put thread into sleep list
+        void CheckAndWakeUp(); // check sleep list and wake up threads
+        
+        // Variables
+        std::list<SleepThread> SleepingThreadList; // store threads that are sleeping
+        int count_int; // interrupt counter, increment in CallBack()
+};
+
 
 // The following class defines a software alarm clock. 
 class Alarm : public CallBackObj {
@@ -30,6 +57,10 @@ class Alarm : public CallBackObj {
     ~Alarm() { delete timer; }
     
     void WaitUntil(int x);	// suspend execution until time > now + x
+    
+    //TODO, declare manager to store sleep thread information
+    SleepThreadManager sleepThreadManager;
+    int count_idle;             // count system has idled for how long
 
   private:
     Timer *timer;		// the hardware timer device
