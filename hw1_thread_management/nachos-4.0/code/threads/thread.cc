@@ -420,20 +420,54 @@ SimpleThread(int which)
     }
 }
 
+//TODO, set start_time and burst time in thread class
+void
+Thread::set_attribute(int st, int bt){
+    start_time = st;
+    burst_time = bt;
+}
+
+//TODO, need to write another threadtest!!!
+static void
+MyThread()
+{
+    Thread* t = kernel->currentThread;
+    while(t->burst_time > 0){
+	cout << "*** thread " << t->name << " remain CPU burst time = " << t->burst_time << "\n";
+        t->burst_time--;
+        // I'm not sure about this 
+        kernel->interrupt->OneTick();
+    }
+}
+
 //----------------------------------------------------------------------
 // Thread::SelfTest
 // 	Set up a ping-pong between two threads, by forking a thread 
 //	to call SimpleThread, and then calling SimpleThread ourselves.
 //----------------------------------------------------------------------
 
+// TODO, write my own test case here to valid correctness of CPU-schedueler
 void
 Thread::SelfTest()
 {
     DEBUG(dbgThread, "Entering Thread::SelfTest");
-
-    Thread *t = new Thread("forked thread");
-
-    t->Fork((VoidFunctionPtr) SimpleThread, (void *) 1);
-    SimpleThread(0);
+    
+    char* thread_name[3]      = {"A", "B", "C"};
+    // Test case 1 
+    // int start_time[3] = {3, 2 ,1}; // For FCFS, should execute in "CBA" order
+    // int burst_time[3] = {5, 2, 3}; // For SJF, should execute in "BCA" order
+    
+    // Test case 2
+    int start_time[3] = {1, 2 ,3}; // For FCFS, should execute in "ABC" order
+    int burst_time[3] = {4, 1, 9}; // For SJF, should execute in "BAC" order
+    
+    // Init all thread
+    Thread* t;
+    int i = 0;
+    for (i = 0; i < 3; i++){
+        t = new Thread(thread_name[i]); 
+        t->set_attribute(start_time[i], burst_time[i]); 
+        t->Fork((VoidFunctionPtr) MyThread, (void *)NULL);
+    }
 }
 

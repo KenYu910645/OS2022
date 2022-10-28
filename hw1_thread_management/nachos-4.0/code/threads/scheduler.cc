@@ -23,17 +23,44 @@
 #include "scheduler.h"
 #include "main.h"
 
+// TODO, implement FCFS compare function
+int
+FCFS_Compare(Thread* a, Thread* b){
+    if (a->start_time > b->start_time){return 1;}
+    else if (a->start_time < b->start_time){return -1;}
+    else{return 0;}
+}
+
+// TODO, implement SJF compare function
+int
+SJF_Compare(Thread* a, Thread* b){
+    if (a->burst_time > b->burst_time){return 1;}
+    else if (a->burst_time < b->burst_time){return -1;}
+    else{return 0;}
+}
+
 //----------------------------------------------------------------------
 // Scheduler::Scheduler
 // 	Initialize the list of ready but not running threads.
 //	Initially, no ready threads.
 //----------------------------------------------------------------------
 
-Scheduler::Scheduler()
+// TODO, adjust comparision method in ready queue to implement different
+// scheduling methods
+Scheduler::Scheduler( SchedulerType scheduler_type )
 {
-//	schedulerType = type;
-	readyList = new List<Thread *>; 
-	toBeDestroyed = NULL;
+        switch (scheduler_type){
+            case FCFS:
+                readyList = new SortedList<Thread*>(FCFS_Compare);
+                break;
+            case SJF:
+                readyList = new SortedList<Thread*>(SJF_Compare);
+                break;
+            case RR:
+                readyList = new List<Thread*>;
+                break;
+       } 
+       toBeDestroyed = NULL;
 } 
 
 //----------------------------------------------------------------------

@@ -17,15 +17,21 @@
 // the data structures and operations needed to keep track of which 
 // thread is running, and which threads are ready but not running.
 
+//TODO, add FCFS 
 enum SchedulerType {
+        FCFS,    // First come first serve
         RR,     // Round Robin
-        SJF,
-        Priority
+        SJF
+        //Priority
 };
+
+// TODO, add helper function to define my schduler
+int FCFS_Compare(Thread* a, Thread* b); // sort readylist with start time
+int SJF_Compare (Thread* a, Thread* b); // sort readylist with burst time
 
 class Scheduler {
   public:
-	Scheduler();		// Initialize list of ready threads 
+	Scheduler(SchedulerType scheduler_type);// Initialize list of ready threads 
 	~Scheduler();				// De-allocate ready list
 
 	void ReadyToRun(Thread* thread);	
@@ -37,7 +43,7 @@ class Scheduler {
 	void CheckToBeDestroyed();	// Check if thread that had been
     					// running needs to be deleted
 	void Print();			// Print contents of ready list
-    
+        
     // SelfTest for scheduler is implemented in class Thread
     
   private:

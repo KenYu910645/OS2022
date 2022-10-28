@@ -23,7 +23,8 @@
 // global variables
 KernelType *kernel;
 Debug *debug;
-
+//TODO Add a schedueler type global variable here
+SchedulerType scheduler_type;
 
 //----------------------------------------------------------------------
 // Cleanup
@@ -69,14 +70,31 @@ main(int argc, char **argv)
 	} else if (strcmp(argv[i], "-z") == 0) {
             cout << copyright;
 	}
-
+        
+        // TODO, add argument that allow user to switch schedueling method
+        else if (strcmp(argv[i], "-fcfs") == 0) {
+            cout << "Using FCFS as CPU-schedueling method" << endl;
+            scheduler_type = FCFS;
+        }
+        else if (strcmp(argv[i], "-sjf") == 0) {
+            cout << "Using SJF as CPU-schedueling method" << endl;
+            scheduler_type = SJF;
+        }
+        else if (strcmp(argv[i], "-rr") == 0) {
+            cout << "Using RR as CPU-schedueling method" << endl;
+            scheduler_type = RR;
+        }
+        
+	
     }
     debug = new Debug(debugArg);
     
     DEBUG(dbgThread, "Entering main");
 
     kernel = new KernelType(argc, argv);
-    kernel->Initialize();
+    
+    // TODO, Pass in scheduelr type
+    kernel->Initialize(scheduler_type);
     
     CallOnUserAbort(Cleanup);		// if user hits ctl-C
 

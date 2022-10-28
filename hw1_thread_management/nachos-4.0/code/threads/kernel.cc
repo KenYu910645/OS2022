@@ -45,18 +45,19 @@ ThreadedKernel::ThreadedKernel(int argc, char **argv)
 //	data via the "kernel" global variable.
 //----------------------------------------------------------------------
 
+// TODO, pass in argument for scheduler type
 void
-ThreadedKernel::Initialize()
+ThreadedKernel::Initialize(SchedulerType scheduler_type)
 {
     stats = new Statistics();		// collect statistics
     interrupt = new Interrupt;		// start up interrupt handling
-    scheduler = new Scheduler();	// initialize the ready queue
+    scheduler = new Scheduler( scheduler_type );        // initialize the ready queue
     alarm = new Alarm(randomSlice);	// start up time slicing
 
     // We didn't explicitly allocate the current thread we are running in.
     // But if it ever tries to give up the CPU, we better have a Thread
     // object to save its state. 
-    currentThread = new Thread("main");		
+    currentThread = new Thread("main");	
     currentThread->setStatus(RUNNING);
 
     interrupt->Enable();

@@ -107,6 +107,12 @@ class Thread {
     void Print() { cout << name; }
     void SelfTest();		// test whether thread impl is working
 
+    // TODO add burst_time and start_time to allow schedueler implement SJF and FCFS
+    void set_attribute(int start_time, int burst_time);
+    int start_time; // For FCFS
+    int burst_time; // For SJF
+    char* name;
+
   private:
     // some of the private data for this class is listed above
     
@@ -114,7 +120,6 @@ class Thread {
 				// NULL if this is the main thread
 				// (If NULL, don't deallocate stack)
     ThreadStatus status;	// ready, running or blocked
-    char* name;
 
     void StackAllocate(VoidFunctionPtr func, void *arg);
     				// Allocate a stack for thread.
