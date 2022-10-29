@@ -132,6 +132,15 @@ ThreadYield:
 
 	.globl  PrintInt
 	.ent    PrintInt
+// TODO add code for SC_Sleep
+Sleep:
+        addiu $2,$0,SC_Sleep
+        syscall
+        j       $31
+        .end Sleep
+
+	.globl  Sleep
+	.ent    Sleep
 PrintInt:
 	addiu   $2,$0,SC_PrintInt
 	syscall

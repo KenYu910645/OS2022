@@ -127,7 +127,7 @@ AddrSpace::Load(char *fileName)
 			+ UserStackSize;	// we need to increase the size
 						// to leave room for the stack
     numPages = divRoundUp(size, PageSize);
-    cout << "number of pages of " << fileName<< " is "<<numPages<<endl;
+    //cout << "number of pages of " << fileName<< " is "<<numPages<<endl;
     //cout << "noffH.code.size = " << noffH.code.size << endl;
     //cout << "noffH.initData.size = " << noffH.initData.size << endl;
     //cout << "noffH.uninitData.size = " << noffH.uninitData.size << endl;
@@ -153,7 +153,7 @@ AddrSpace::Load(char *fileName)
         }
         pageTable[i].valid = TRUE;
     }
-    cout << "numFreePhyPage after allocate = " << numFreePhyPage << endl;
+    //cout << "numFreePhyPage after allocate = " << numFreePhyPage << endl;
     
     DEBUG(dbgAddr, "Initializing address space: " << numPages << ", " << size);
 
