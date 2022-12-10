@@ -44,6 +44,75 @@ void CheckEndian()
 #endif
 }
 
+// TODO-hw3
+FrameTable::FrameTable(){
+    int i;
+    for (i = 0; i < NumPhysPages; i++){
+        t[i].refBit = false; // 
+        t[i].useThreadID = -1; // unassigned, -1 mean frame unused(it's a free frame)
+        t[i].virtualPageNum = -1;// unassigned
+    }
+    LRU_ptr = 0;
+}
+
+int 
+FrameTable::getNumFreeFrame(){
+    int i;
+    int count = 0;
+    for (i = 0; i < NumPhysPages; i++){
+        if (t[i].useThreadID == -1) 
+            count ++;
+    }
+    return count;
+}
+
+int 
+FrameTable::getFreeFrameNum(){
+    int i;
+    for (i = 0; i < NumPhysPages; i++){
+        if (t[i].useThreadID == -1) 
+            return i;
+    }
+    cout << "[ERROR] No Free frame in physical memory" << endl;
+    return -1;
+}
+
+int 
+FrameTable::getVictim(){
+    // Make sure there's no free frame
+    ASSERT(getFreeFrameNum() == 0);
+
+    // Random select victim
+    // return (rand() % NumPhysPages);
+    // Second chance LRU algorithm
+    int victim = -1;
+    while (true){
+        if (t[LRU_ptr%NumPhysPages].refBit){
+            // Update LRU reference bit
+            t[LRU_ptr%NumPhysPages].refBit = false;
+            victim = LRU_ptr;
+            LRU_ptr++;
+            break;
+        }
+        else{
+            // Give the frame a second chance
+            t[LRU_ptr%NumPhysPages].refBit = true;
+            LRU_ptr++;
+        }
+    }
+    return victim;
+}
+
+int 
+Machine::getFreeDiskSect(){
+    for (unsigned int j = 0; j < MaxNumSwapPage; j++){
+        if (not isSwapDiskUsed[j])
+            return j;
+    }
+    cout << "[ERROR] Can't find free disk sector for virtual memory!" << endl;
+    return -1;
+}
+
 //----------------------------------------------------------------------
 // Machine::Machine
 // 	Initialize the simulation of user program execution.
@@ -55,12 +124,9 @@ void CheckEndian()
 Machine::Machine(bool debug)
 {
     // TODO-hw3, initialize physical page
-    numFreePhyPage = NumPhysPages;
-    isPhyPageUsed = {false};
-    secondChancePtr = 0;
-    isSecondChancePage = {false};
     isSwapDiskUsed = {false};
-     
+    FrameTable frameTable = FrameTable();
+    
     //
     int i;
     for (i = 0; i < NumTotalRegs; i++)

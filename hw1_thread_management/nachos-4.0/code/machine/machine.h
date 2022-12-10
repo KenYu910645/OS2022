@@ -36,6 +36,7 @@ const int TLBSize = 4;			// if there is a TLB, make it small
 
 // TODO-hw3
 const unsigned int MaxNumSwapPage = 4096;
+const unsigned int MaxNumThread   = 8;
 
 enum ExceptionType { NoException,           // Everything ok!
 		     SyscallException,      // A program executed a system call.
@@ -71,6 +72,24 @@ enum ExceptionType { NoException,           // Everything ok!
 #define BadVAddrReg	39	// The failing virtual address on an exception
 
 #define NumTotalRegs 	40
+
+//TODO-hw3, declare PhysicalFrameEntry and FrameTable to keep track of status of physical memory
+class PhysicalFrameEntry{
+	public:
+		bool refBit; // for LRU algorithm
+		int useThreadID; // Which thread is using this frame?
+		int virtualPageNum; // which Virtual Page number is link to this frame. note that phyical frame and memory page is currently one-to-one
+};
+class FrameTable{
+	public:
+		FrameTable();
+		int getVictim(); // get frame number of a victim frame 
+		int getNumFreeFrame(); // Return number of free frame in the memory
+		int getFreeFrameNum(); // Return a random free frame number
+		//
+		PhysicalFrameEntry t[NumPhysPages];
+		unsigned int LRU_ptr;
+};
 
 // The following class defines the simulated host workstation hardware, as 
 // seen by user programs -- the CPU registers, main memory, etc.
@@ -131,17 +150,17 @@ class Machine {
 
     TranslationEntry *tlb;		// this pointer should be considered 
 					// "read-only" to Nachos kernel code
-
+	// Current thread's pageTable
     TranslationEntry *pageTable;
     unsigned int pageTableSize;
     bool ReadMem(int addr, int size, int* value);
-    // TODO-hw3, record status of physical pages
-    unsigned int numFreePhyPage;
-    bool isPhyPageUsed[NumPhysPages];
-    bool isSecondChancePage[NumPhysPages];
-    unsigned int secondChancePtr;
-    // TODO-hw3, maintain a swapDisk table
-    bool isSwapDiskUsed[MaxNumSwapPage];
+
+    // TODO-hw3
+	FrameTable frameTable; // Use frameTable to keep track of physical frame status
+	TranslationEntry *pageTableAll[MaxNumThread]; // record all pageTable in all threads
+    bool isSwapDiskUsed[MaxNumSwapPage]; // maintain table for swapDisk table
+	int getFreeDiskSect();
+
   private:
 
 // Routines internal to the machine simulation -- DO NOT call these directly

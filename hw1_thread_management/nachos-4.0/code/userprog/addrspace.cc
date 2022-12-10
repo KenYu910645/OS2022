@@ -56,23 +56,27 @@ SwapHeader (NoffHeader *noffH)
 
 AddrSpace::AddrSpace()
 {
-    // Allcoate so many pages is a bit overkill, but if we implement visual memory correctly, this won't be a problem
-    // TODO-hw3, initlize pageTable with 1024 entry
+    // TODO-hw3, assign thread ID by thread Counter 
+    static int threadCounter = 0;
+    threadID = threadCounter;
+    threadCounter++;
+    cout << "Initializing thread AddrSpace, threadID = " << threadID << endl;
+
+    // initlize pageTable with MaxNumVirPage entry
     pageTable = new TranslationEntry[MaxNumVirPage];
     for (unsigned int i = 0; i < MaxNumVirPage; i++) {
-	pageTable[i].virtualPage = i;
-	pageTable[i].physicalPage = i;
-        pageTable[i].valid = FALSE;//switch to invalid because system haven't init them
-	pageTable[i].use = FALSE;
-	pageTable[i].dirty = FALSE;
-	pageTable[i].readOnly = FALSE; 
+        pageTable[i].virtualPage = i;
+        pageTable[i].physicalPage = i;
+        pageTable[i].valid = FALSE; //switch to invalid because system haven't init them
+        pageTable[i].use = FALSE;
+        pageTable[i].dirty = FALSE;
+        pageTable[i].readOnly = FALSE;
+        pageTable[i].swapSectorId = -1; //default no page is on disk
     }
-    
-    // TODO-hw3, initlize swapTable
-    for (unsigned int i = 0; i < MaxNumVirPage; i++){
-        swapTable[i] = -1; // -1 means, this page is not on disk
-    }
-    
+
+    // register threadID pagetable in machine
+    kernel->machine->pageTableAll[threadID] = pageTable;
+
     // zero out the entire address space
 //    bzero(kernel->machine->mainMemory, MemorySize);
 }
@@ -84,18 +88,16 @@ AddrSpace::AddrSpace()
 
 AddrSpace::~AddrSpace()
 {
-    // TODO-hw1, need to release physical pages that occupied by process
+    // TODO-hw1, release physical pages that were occupied by this thread
     for (unsigned int i = 0; i < numPages; i++) {
-      	if (kernel->machine->isPhyPageUsed[pageTable[i].physicalPage]){
-            kernel->machine->isPhyPageUsed[pageTable[i].physicalPage] = false;
-            kernel->machine->numFreePhyPage++;
+      	if (kernel->machine->frameTable.t[pageTable[i].physicalPage].useThreadID == threadID){
+            kernel->machine->frameTable.t[pageTable[i].physicalPage].useThreadID = -1;
         }
     }
-    // TODO-hw3 recycle disk page used by this process
+    // TODO-hw3, release disk pages that were occupied by this thread
     for (unsigned int i = 0; i < numPages; i++) {
-      	if (kernel->machine->isSwapDiskUsed[swapTable[i]]){
-            kernel->machine->isSwapDiskUsed[swapTable[i]] = false;
-            kernel->machine->isSecondChancePage[f] = false;
+      	if (kernel->machine->isSwapDiskUsed[pageTable[i].swapSectorId]){
+            kernel->machine->isSwapDiskUsed[pageTable[i].swapSectorId] = false;
         }
     }
     delete pageTable;
@@ -112,22 +114,52 @@ void AddrSpace::ReadAtVirutalMem(OpenFile* executable, int segmentSize, int base
     // load in page by page
     for (unsigned int i = 0; i < divRoundUp(segmentSize, PageSize); i++){
         int vpn = baseVirtualAddr/PageSize + i; // virtual page number
-        if (pageTable[vpn].valid){ // a valid page on memory
+
+        // If there is enough memory for paging, claim a page for this thread
+        if (kernel->machine->frameTable->getNumFreeFrame() > 0)
+            // Find a free frame
+            int freeFrameNum = kernel->machine->frameTable->getFreeFrameNum();
+
             // load page to memory
-            executable->ReadAt(&(kernel->machine->mainMemory[pageTablep[vpn].physicalPage*PageSize]), 
-	      		      PageSize,
-                              inFileAddr + i*PageSize);
-        } 
+            executable->ReadAt(&(kernel->machine->mainMemory[freeFrameNum*PageSize]), 
+	      		               PageSize,
+                               inFileAddr + i*PageSize);
+            
+            // Update pageTable
+            pageTable[vpn].virtualPage  = vpn;
+            pageTable[vpn].physicalPage = freeFrameNum;
+            pageTable[vpn].swapSectorId = -1;
+            pageTable[vpn].valid = TRUE;
+
+            // Update FrameTable
+            kernel->machine->frameTable.t[freeFrameNum].refBit = false;
+            kernel->machine->frameTable.t[freeFrameNum].useThreadID = threadID;
+            kernel->machine->frameTable.t[freeFrameNum].virtualPageNum = vpn;   
+
+        }
         else{ // invalid page load in virtual memory(SwapDisk)
             char* buffer;
             buffer = new char[PageSize];
             
             //load page content in buffer
             executable->ReadAt(buffer, 
-			       PageSize,
+			                   PageSize,
                                inFileAddr + i*PageSize);
+            
+            // find a free disk sector for virtual memory
+            int sectorId = kernel->machine->getFreeDiskSect();
+
             // write page to disk(virtual memory)
-            kernel->virMemDisk->WriteSector(swapTable[vpn], buffer); 
+            kernel->virMemDisk->WriteSector(sectorId, buffer);
+
+            // Update pageTable
+            pageTable[vpn].virtualPage  = vpn;
+            pageTable[vpn].physicalPage = -1;
+            pageTable[vpn].swapSectorId = sectorId;
+            pageTable[vpn].valid = FALSE;
+
+            // Update SectorTable
+            kernel->machine->isSwapDiskUsed[sectorId] = true;
         }
     }
 }
@@ -171,49 +203,15 @@ AddrSpace::Load(char *fileName)
     //cout << "UserStackSize = " << UserStackSize << endl;
     size = numPages * PageSize;
 
-    // TODO-hw1, check free physical page is enough for this process
-    cout << "numFreePhyPage = " << numFreePhyPage << endl;
+    // TODO-hw3
+    cout << "numFreePhyPage = " << kernel->machine->frameTable->getNumFreeFrame() << endl;
     cout << "numPages = " << numPages << endl;
     
     // TODO-hw3, switch off physical Memory check 
-    if (numPages > numFreePhyPage){
+    if (numPages > kernel->machine->frameTable->getNumFreeFrame()){
         cout << "numPages larger than numFreePhyPage, except virtual memory implemented." << endl;
     }
-    // ASSERT(numPages <= numFreePhyPage);
     ASSERT(numPages <= MaxNumVirPage);
-     
-    // TODO-hw3, Update pagetable of this process, and only allocate free physical page to it.
-    for (unsigned int i = 0; i < numPages; i++) {
-      	pageTable[i].virtualPage = i;
-        
-        // if there are free pages in memory
-        if (kernel->machine->numFreePhyPage > 0){
-            // Find a free up physical page by linear search
-            for (unsigned int j = 0; j < NumPhysPages; j++){
-                if (not kernel->machine->isPhyPageUsed[j]){
-                    // Allocate physical page to this visual page
-                    pageTable[i].physicalPage = j;
-                    kernel->machine->isPhyPageUsed[j] = true;
-                    kernel->machine->numFreePhyPage--;
-                    break;
-                };
-            }
-            pageTable[i].valid = TRUE;           
-        }
-        else{ // no free page in memory, use virtual memory
-            for (unsigned int j = 0; j < MaxNumSwapPage; j++){
-                if (not kernel->machine->isSwapDiskUsed[j]){
-                    pageTable[i].physicalPage = -1;
-                    swapTable[i] = j;
-                    kernel->machine->isSwapDiskUsed[j] = true;
-                    break;
-                }
-            }
-            pageTable[i].valid = FALSE;
-        }
-    }
-    //cout << "numFreePhyPage after allocate = " << numFreePhyPage << endl;
-    
     DEBUG(dbgAddr, "Initializing address space: " << numPages << ", " << size);
 
 // then, copy in the code and data segments into memory
@@ -315,8 +313,6 @@ void AddrSpace::SaveState()
 {
         pageTable=kernel->machine->pageTable;
         numPages=kernel->machine->pageTableSize;
-        // TODO-hw3, pass swap table during context switch 
-        swapTable=kernel->machine->swapTable;
 }
 
 //----------------------------------------------------------------------
@@ -331,6 +327,4 @@ void AddrSpace::RestoreState()
 {
     kernel->machine->pageTable = pageTable;
     kernel->machine->pageTableSize = numPages;
-    // TODO-hw3, pass swap table during context switch 
-    kernel->machine->swapTable = swapTable;
 }

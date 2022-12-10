@@ -19,7 +19,6 @@
 
 #define UserStackSize	1024	 	// increase this as necessary!
 #define MaxNumVirPage  1024
-#define NumDiskSector   2048
 
 class AddrSpace {
   public:
@@ -35,12 +34,13 @@ class AddrSpace {
   private:
     TranslationEntry *pageTable;	// Assume linear page table translation
 					// for now!
-    unsigned int numPages;		// Number of pages in the virtual 
+    unsigned int numPages;// Number of pages in the virtual 
 					// address space
     // TODO-hw3, record virtual pages swap sector 
-    unsigned int swapTable[MaxNumVirPage];
-   
-    int VirtoPhys(int virtualAddr);     // Translate virtual address to phyiscal 
+    unsigned int threadID;
+
+    // TODO-hw1
+    // int VirtoPhys(int virtualAddr);     // Translate virtual address to phyiscal 
        
     bool Load(char *fileName);		// Load the program into memory
 					// return false if not found
