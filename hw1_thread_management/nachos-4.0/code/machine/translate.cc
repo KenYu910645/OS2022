@@ -239,7 +239,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
             // Find a victim page to swap to disk
             else{
                 // Pick a victim frame via LRU second chance algorithm
-                int victim = kernel->machine->frameTable->getVictim();
+                int victim = kernel->machine->frameTable.getVictim();
                 
                 char* buffer1;
                 char* buffer2;
@@ -257,7 +257,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
                 int victimSectID = kernel->machine->pageTableAll[victimTid][victimVPN].swapSectorId;
                 
                 // Write buffer2's content to victimSectID on disk
-                kernel->virMemDisk->WriteSector(victimSectID, buffer2)
+                kernel->virMemDisk->WriteSector(victimSectID, buffer2);
                 // Write demanding swpage page to memory
                 bcopy(buffer1, &mainMemory[victim*PageSize], PageSize);
 
@@ -275,8 +275,8 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
                 kernel->machine->frameTable.t[victim].refBit = false;
                 kernel->machine->frameTable.t[victim].useThreadID = threadID;
                 kernel->machine->frameTable.t[victim].virtualPageNum = vpn;
-	        }
-	entry = &pageTable[vpn];
+	    }
+	    entry = &pageTable[vpn];
     } else {
         for (entry = NULL, i = 0; i < TLBSize; i++)
     	    if (tlb[i].valid && (tlb[i].virtualPage == vpn)) {

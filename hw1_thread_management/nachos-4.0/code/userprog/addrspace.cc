@@ -109,16 +109,16 @@ AddrSpace::~AddrSpace()
 //    return pageTable[v_addr/PageSize].physicalPage*PageSize + v_addr%PageSize; 
 //}
 
-void AddrSpace::ReadAtVirutalMem(OpenFile* executable, int segmentSize, int baseVirtualAddr, int inFileAddr){
+void AddrSpace::ReadAtVirtualMem(OpenFile* executable, int segmentSize, int baseVirtualAddr, int inFileAddr){
     // helper function to load code segment and init variable in virtual memory
     // load in page by page
     for (unsigned int i = 0; i < divRoundUp(segmentSize, PageSize); i++){
         int vpn = baseVirtualAddr/PageSize + i; // virtual page number
 
         // If there is enough memory for paging, claim a page for this thread
-        if (kernel->machine->frameTable->getNumFreeFrame() > 0)
+        if (kernel->machine->frameTable.getNumFreeFrame() > 0){
             // Find a free frame
-            int freeFrameNum = kernel->machine->frameTable->getFreeFrameNum();
+            int freeFrameNum = kernel->machine->frameTable.getFreeFrameNum();
 
             // load page to memory
             executable->ReadAt(&(kernel->machine->mainMemory[freeFrameNum*PageSize]), 
@@ -204,11 +204,11 @@ AddrSpace::Load(char *fileName)
     size = numPages * PageSize;
 
     // TODO-hw3
-    cout << "numFreePhyPage = " << kernel->machine->frameTable->getNumFreeFrame() << endl;
+    cout << "numFreePhyPage = " << kernel->machine->frameTable.getNumFreeFrame() << endl;
     cout << "numPages = " << numPages << endl;
     
     // TODO-hw3, switch off physical Memory check 
-    if (numPages > kernel->machine->frameTable->getNumFreeFrame()){
+    if (numPages > kernel->machine->frameTable.getNumFreeFrame()){
         cout << "numPages larger than numFreePhyPage, except virtual memory implemented." << endl;
     }
     ASSERT(numPages <= MaxNumVirPage);

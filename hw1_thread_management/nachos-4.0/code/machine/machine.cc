@@ -124,7 +124,8 @@ Machine::getFreeDiskSect(){
 Machine::Machine(bool debug)
 {
     // TODO-hw3, initialize physical page
-    isSwapDiskUsed = {false};
+    for (int i = 0; i < MaxNumSwapPage; i++)
+        isSwapDiskUsed[i] = false;
     FrameTable frameTable = FrameTable();
     
     //
