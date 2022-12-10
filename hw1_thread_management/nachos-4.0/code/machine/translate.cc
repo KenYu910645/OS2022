@@ -88,7 +88,6 @@ Machine::ReadMem(int addr, int size, int *value)
     int data;
     ExceptionType exception;
     int physicalAddress;
-    
     DEBUG(dbgAddr, "Reading VA " << addr << ", size " << size);
     
     exception = Translate(addr, &physicalAddress, size, FALSE);
@@ -197,6 +196,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
 	return AddressErrorException;
     }
     
+    // cout << "pageTable = " << pageTable << endl; 
     // we must have either a TLB or a page table, but not both!
     ASSERT(tlb == NULL || pageTable == NULL);	
     ASSERT(tlb != NULL || pageTable != NULL);	
@@ -205,14 +205,86 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
 // from the virtual address
     vpn = (unsigned) virtAddr / PageSize;
     offset = (unsigned) virtAddr % PageSize;
+   
+    cout << "pageTableSize = " << pageTableSize << endl; 
     
     if (tlb == NULL) {		// => page table => vpn is index into table
 	if (vpn >= pageTableSize) {
 	    DEBUG(dbgAddr, "Illegal virtual page # " << virtAddr);
 	    return AddressErrorException;
 	} else if (!pageTable[vpn].valid) {
-	    DEBUG(dbgAddr, "Invalid virtual page # " << virtAddr);
-	    return PageFaultException;
+            // TODO-hw3, implement replacement algorithm
+	    // DEBUG(dbgAddr, "Invalid virtual page # " << virtAddr);
+	    // return PageFaultException;
+            
+            // swap page in free physical memory
+            if (kernel->machine->numFreePhyPage > 0){
+                // Find the free frame
+                unsigned int freeFrameNum = 0;
+                while(true){
+                    if (!kernel->machine->isPhyPageUsed[freeFrameNum]){
+                        // Update Frame Table status
+                        kernel->machine->isPhyPageUsed[freeFrameNum] = true;
+                        kernel->machine->numFreePhyPage--;
+                        // Update second chance table
+                        kernel->machine->isSecondChancePage[freeFrameNum] = false;
+                        break;
+                    }
+                }
+               
+                char* buffer;
+                buffer = new char[PageSize];
+                
+                // Copy sector's content to buffer
+                kernel->virMemDisk->ReadSector(kernel->machine->swapTable[vpn], buffer);
+                
+                // Copy buffer's content to physical memory frame
+                bcopy(buffer, &mainMemory[freeFrameNum*PageSize], PageSize);
+            }
+            // Find a victim page to swap to disk
+            else{
+                // Pick a victim frame via LRU second chance algorithm
+                unsigned int victimFrameNum;
+                unsigned int p = kernel->machine->secondChancePtr;
+                // Random select victim
+                // victimFrameNum = (rand() % NumPhysPages);
+                
+                // Second chance LRU algorithm
+                while (true){
+                    if (kernel->machine->isSecondChancePage[p%NumPhysPages]){
+                        victimFrameNum = p;
+                        // Update LRU reference bit
+                        kernel->machine->isSecondChancePage[p%NumPhysPages] = false;
+                        p++;
+                        break;
+                    }
+                    else{
+                        // Give the frame a second chance
+                        kernel->machine->isSecondChancePage[p%NumPhysPages] = true;
+                        p++;
+                    }
+                }
+                kernel->machine->secondChancePtr = p;
+                // TODO, update swapTable, FrameTable
+                char* buffer1;
+                char* buffer2;
+                buffer1 = new char[PageSize];
+                buffer2 = new char[PageSize];
+                
+                // Copy victim page to buffer
+                bcopy(&mainMemory[victimFrameNum*PageSize], buffer2, PageSize); 
+                // Copy demanding swap page to buffer
+                kernel->virMemDisk->ReadSector(kernel->machine->swapTable[vpn], buffer1);
+                // Write victim page to swap disk
+                kernel->virMemDisk->WriteSector(kernel->machine->swapTable[???? GG]) 
+                // Write demanding swpage page to memory
+                bcopy(buffer1, &mainMemory[victimFrameNum*PageSize], PageSize);
+
+                
+
+
+            
+            }
 	}
 	entry = &pageTable[vpn];
     } else {
@@ -223,6 +295,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
 	    }
 	if (entry == NULL) {				// not found
     	    DEBUG(dbgAddr, "Invalid TLB entry for this virtual page!");
+            cout << "I didn't implement TLB virtual memory" << endl;
     	    return PageFaultException;		// really, this is a TLB fault,
 						// the page may be in memory,
 						// but not in the TLB

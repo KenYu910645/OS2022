@@ -52,12 +52,15 @@ UserProgKernel::UserProgKernel(int argc, char **argv)
 //----------------------------------------------------------------------
 
 void
-UserProgKernel::Initialize()
+UserProgKernel::Initialize(SchedulerType scheduler_type)
 {
-    ThreadedKernel::Initialize();	// init multithreading
+    // TODO-hw2, pass in scheduler_type
+    ThreadedKernel::Initialize(scheduler_type);	// init multithreading
 
     machine = new Machine(debugUserProg);
     fileSystem = new FileSystem();
+    // TODO-hw3, new a virtual memory disk for page swapping
+    virtualMemDisk = new SynchDisk("Virtual Memory");
 #ifdef FILESYS
     synchDisk = new SynchDisk("New SynchDisk");
 #endif // FILESYS

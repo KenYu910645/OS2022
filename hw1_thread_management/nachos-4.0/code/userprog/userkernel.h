@@ -22,8 +22,9 @@ class UserProgKernel : public ThreadedKernel {
     UserProgKernel(int argc, char **argv);
 				// Interpret command line arguments
     ~UserProgKernel();		// deallocate the kernel
-
-    void Initialize();		// initialize the kernel 
+    
+    // TODO-hw2
+    void Initialize(SchedulerType scheduler_type);		// initialize the kernel 
 
     void Run();			// do kernel stuff 
 
@@ -32,6 +33,9 @@ class UserProgKernel : public ThreadedKernel {
 // These are public for notational convenience.
     Machine *machine;
     FileSystem *fileSystem;
+    
+    // TODO-hw3, initialize disk for virtual memory
+    SynchDisk *virMemDisk;
 
 #ifdef FILESYS
     SynchDisk *synchDisk;

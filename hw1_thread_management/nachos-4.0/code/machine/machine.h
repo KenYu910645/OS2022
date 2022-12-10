@@ -34,6 +34,9 @@ const unsigned int NumPhysPages = 32;
 const int MemorySize = (NumPhysPages * PageSize);
 const int TLBSize = 4;			// if there is a TLB, make it small
 
+// TODO-hw3
+const unsigned int MaxNumSwapPage = 4096;
+
 enum ExceptionType { NoException,           // Everything ok!
 		     SyscallException,      // A program executed a system call.
 		     PageFaultException,    // No valid translation found
@@ -132,6 +135,13 @@ class Machine {
     TranslationEntry *pageTable;
     unsigned int pageTableSize;
     bool ReadMem(int addr, int size, int* value);
+    // TODO-hw3, record status of physical pages
+    unsigned int numFreePhyPage;
+    bool isPhyPageUsed[NumPhysPages];
+    bool isSecondChancePage[NumPhysPages];
+    unsigned int secondChancePtr;
+    // TODO-hw3, maintain a swapDisk table
+    bool isSwapDiskUsed[MaxNumSwapPage];
   private:
 
 // Routines internal to the machine simulation -- DO NOT call these directly

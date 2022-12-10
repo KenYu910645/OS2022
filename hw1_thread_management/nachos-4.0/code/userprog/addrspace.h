@@ -18,6 +18,8 @@
 #include <string.h>
 
 #define UserStackSize	1024	 	// increase this as necessary!
+#define MaxNumVirPage  1024
+#define NumDiskSector   2048
 
 class AddrSpace {
   public:
@@ -35,11 +37,9 @@ class AddrSpace {
 					// for now!
     unsigned int numPages;		// Number of pages in the virtual 
 					// address space
-    // TODO, add numFreePhyPage to keep track of number of free pages
-    static unsigned int numFreePhyPage;
-    // TODO, add isPhyPageFree to record the status of every physical pages.
-    static bool isPhyPageUsed[NumPhysPages];
-
+    // TODO-hw3, record virtual pages swap sector 
+    unsigned int swapTable[MaxNumVirPage];
+   
     int VirtoPhys(int virtualAddr);     // Translate virtual address to phyiscal 
        
     bool Load(char *fileName);		// Load the program into memory
@@ -47,7 +47,9 @@ class AddrSpace {
 
     void InitRegisters();		// Initialize user-level CPU registers,
 					// before jumping to user code
-
+    // TODO-hw3, load segment in virtual memory
+    void ReadAtVirtualMem(OpenFile* executable, int segmentSize, int baseVirtualAddr, int inFileAddr);
+    
 };
 
 #endif // ADDRSPACE_H

@@ -49,9 +49,9 @@ NetKernel::NetKernel(int argc, char **argv) : UserProgKernel(argc, argv)
 //----------------------------------------------------------------------
 
 void
-NetKernel::Initialize()
+NetKernel::Initialize(SchedulerType scheduler_type)
 {
-    UserProgKernel::Initialize();	// init other kernel data structs
+    UserProgKernel::Initialize(scheduler_type);	// init other kernel data structs
 
     postOfficeIn = new PostOfficeInput(10);
     postOfficeOut = new PostOfficeOutput(reliability, 10);

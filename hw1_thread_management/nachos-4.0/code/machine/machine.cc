@@ -54,8 +54,15 @@ void CheckEndian()
 
 Machine::Machine(bool debug)
 {
+    // TODO-hw3, initialize physical page
+    numFreePhyPage = NumPhysPages;
+    isPhyPageUsed = {false};
+    secondChancePtr = 0;
+    isSecondChancePage = {false};
+    isSwapDiskUsed = {false};
+     
+    //
     int i;
-
     for (i = 0; i < NumTotalRegs; i++)
         registers[i] = 0;
     mainMemory = new char[MemorySize];

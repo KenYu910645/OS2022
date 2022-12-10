@@ -22,8 +22,8 @@ class NetKernel : public UserProgKernel {
     NetKernel(int argc, char **argv);
 				// Interpret command line arguments
     ~NetKernel();		// deallocate the kernel
-
-    void Initialize();		// initialize the kernel 
+    // TODO-hw2
+    void Initialize(SchedulerType scheduler_type);		// initialize the kernel 
 
     void Run();			// do kernel stuff 
 

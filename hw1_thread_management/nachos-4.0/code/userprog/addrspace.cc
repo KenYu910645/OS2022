@@ -50,22 +50,27 @@ SwapHeader (NoffHeader *noffH)
 //	only uniprogramming, and we have a single unsegmented page table
 //----------------------------------------------------------------------
 
-// TODO, Initialize Data structure that help record status of physical memory
-bool AddrSpace::isPhyPageUsed[NumPhysPages] = {false};
-unsigned int AddrSpace::numFreePhyPage = NumPhysPages;
+// TODO-hw1, Initialize Data structure that help record status of physical memory
+// bool AddrSpace::isPhyPageUsed[NumPhysPages] = {false};
+// unsigned int AddrSpace::numFreePhyPage = NumPhysPages;
 
 AddrSpace::AddrSpace()
 {
     // Allcoate so many pages is a bit overkill, but if we implement visual memory correctly, this won't be a problem
-    pageTable = new TranslationEntry[NumPhysPages];
-    for (unsigned int i = 0; i < NumPhysPages; i++) {
+    // TODO-hw3, initlize pageTable with 1024 entry
+    pageTable = new TranslationEntry[MaxNumVirPage];
+    for (unsigned int i = 0; i < MaxNumVirPage; i++) {
 	pageTable[i].virtualPage = i;
 	pageTable[i].physicalPage = i;
-	// TODO, switch all valid  bit to False because I haven't init them 
-        pageTable[i].valid = FALSE;
+        pageTable[i].valid = FALSE;//switch to invalid because system haven't init them
 	pageTable[i].use = FALSE;
 	pageTable[i].dirty = FALSE;
-	pageTable[i].readOnly = FALSE;  
+	pageTable[i].readOnly = FALSE; 
+    }
+    
+    // TODO-hw3, initlize swapTable
+    for (unsigned int i = 0; i < MaxNumVirPage; i++){
+        swapTable[i] = -1; // -1 means, this page is not on disk
     }
     
     // zero out the entire address space
@@ -79,20 +84,52 @@ AddrSpace::AddrSpace()
 
 AddrSpace::~AddrSpace()
 {
-    // TODO, need to release physical pages that occupied by process
+    // TODO-hw1, need to release physical pages that occupied by process
     for (unsigned int i = 0; i < numPages; i++) {
-      	if (isPhyPageUsed[pageTable[i].physicalPage] == true){
-            isPhyPageUsed[pageTable[i].physicalPage] = false;
-            numFreePhyPage++;
+      	if (kernel->machine->isPhyPageUsed[pageTable[i].physicalPage]){
+            kernel->machine->isPhyPageUsed[pageTable[i].physicalPage] = false;
+            kernel->machine->numFreePhyPage++;
+        }
+    }
+    // TODO-hw3 recycle disk page used by this process
+    for (unsigned int i = 0; i < numPages; i++) {
+      	if (kernel->machine->isSwapDiskUsed[swapTable[i]]){
+            kernel->machine->isSwapDiskUsed[swapTable[i]] = false;
+            kernel->machine->isSecondChancePage[f] = false;
         }
     }
     delete pageTable;
 }
 
 
-// TODO Implement translattion
-int AddrSpace::VirtoPhys(int v_addr){
-    return pageTable[v_addr/PageSize].physicalPage*PageSize + v_addr%PageSize; 
+// TODO-hw1 Implement translattion
+//int AddrSpace::VirtoPhys(int v_addr){
+//    return pageTable[v_addr/PageSize].physicalPage*PageSize + v_addr%PageSize; 
+//}
+
+void AddrSpace::ReadAtVirutalMem(OpenFile* executable, int segmentSize, int baseVirtualAddr, int inFileAddr){
+    // helper function to load code segment and init variable in virtual memory
+    // load in page by page
+    for (unsigned int i = 0; i < divRoundUp(segmentSize, PageSize); i++){
+        int vpn = baseVirtualAddr/PageSize + i; // virtual page number
+        if (pageTable[vpn].valid){ // a valid page on memory
+            // load page to memory
+            executable->ReadAt(&(kernel->machine->mainMemory[pageTablep[vpn].physicalPage*PageSize]), 
+	      		      PageSize,
+                              inFileAddr + i*PageSize);
+        } 
+        else{ // invalid page load in virtual memory(SwapDisk)
+            char* buffer;
+            buffer = new char[PageSize];
+            
+            //load page content in buffer
+            executable->ReadAt(buffer, 
+			       PageSize,
+                               inFileAddr + i*PageSize);
+            // write page to disk(virtual memory)
+            kernel->virMemDisk->WriteSector(swapTable[vpn], buffer); 
+        }
+    }
 }
 
 //----------------------------------------------------------------------
@@ -134,24 +171,46 @@ AddrSpace::Load(char *fileName)
     //cout << "UserStackSize = " << UserStackSize << endl;
     size = numPages * PageSize;
 
-    // TODO, check free physical page is enough for this process
-    ASSERT(numPages <= numFreePhyPage);
-    // cout << "numFreePhyPage = " << numFreePhyPage << endl;
+    // TODO-hw1, check free physical page is enough for this process
+    cout << "numFreePhyPage = " << numFreePhyPage << endl;
+    cout << "numPages = " << numPages << endl;
+    
+    // TODO-hw3, switch off physical Memory check 
+    if (numPages > numFreePhyPage){
+        cout << "numPages larger than numFreePhyPage, except virtual memory implemented." << endl;
+    }
+    // ASSERT(numPages <= numFreePhyPage);
+    ASSERT(numPages <= MaxNumVirPage);
      
-    // TODO, Update pagetable of this process, and only allocate free physical page to it.
+    // TODO-hw3, Update pagetable of this process, and only allocate free physical page to it.
     for (unsigned int i = 0; i < numPages; i++) {
       	pageTable[i].virtualPage = i;
-        // Find a free up physical page by linear search
-        for (unsigned int j = 0; j < NumPhysPages; j++){
-            if (not isPhyPageUsed[j]){
-                // Allocate physical page to this visual page
-                pageTable[i].physicalPage = j;
-                isPhyPageUsed[j] = true;
-                numFreePhyPage--;
-                break;
-            };
+        
+        // if there are free pages in memory
+        if (kernel->machine->numFreePhyPage > 0){
+            // Find a free up physical page by linear search
+            for (unsigned int j = 0; j < NumPhysPages; j++){
+                if (not kernel->machine->isPhyPageUsed[j]){
+                    // Allocate physical page to this visual page
+                    pageTable[i].physicalPage = j;
+                    kernel->machine->isPhyPageUsed[j] = true;
+                    kernel->machine->numFreePhyPage--;
+                    break;
+                };
+            }
+            pageTable[i].valid = TRUE;           
         }
-        pageTable[i].valid = TRUE;
+        else{ // no free page in memory, use virtual memory
+            for (unsigned int j = 0; j < MaxNumSwapPage; j++){
+                if (not kernel->machine->isSwapDiskUsed[j]){
+                    pageTable[i].physicalPage = -1;
+                    swapTable[i] = j;
+                    kernel->machine->isSwapDiskUsed[j] = true;
+                    break;
+                }
+            }
+            pageTable[i].valid = FALSE;
+        }
     }
     //cout << "numFreePhyPage after allocate = " << numFreePhyPage << endl;
     
@@ -161,18 +220,22 @@ AddrSpace::Load(char *fileName)
 	if (noffH.code.size > 0) {
         DEBUG(dbgAddr, "Initializing code segment.");
 	DEBUG(dbgAddr, noffH.code.virtualAddr << ", " << noffH.code.size);
-        // TODO need to translate virtualAddr to PhyiscalAddr
-        executable->ReadAt(
-		&(kernel->machine->mainMemory[VirtoPhys(noffH.code.virtualAddr)]), 
-			noffH.code.size, noffH.code.inFileAddr);
+        // TODO-hw3
+        ReadAtVirtualMem(executable, noffH.code.size, noffH.code.virtualAddr, noffH.code.inFileAddr);
+        // TODO-hw1 need to translate virtualAddr to PhyiscalAddr
+        //executable->ReadAt(
+	//	&(kernel->machine->mainMemory[VirtoPhys(noffH.code.virtualAddr)]), 
+        //			noffH.code.size, noffH.code.inFileAddr);
     }
 	if (noffH.initData.size > 0) {
         DEBUG(dbgAddr, "Initializing data segment.");
 	DEBUG(dbgAddr, noffH.initData.virtualAddr << ", " << noffH.initData.size);
-        // TODO need to translate virtualAddr to PhyiscalAddr
-        executable->ReadAt(
-		&(kernel->machine->mainMemory[VirtoPhys(noffH.initData.virtualAddr)]),
-			noffH.initData.size, noffH.initData.inFileAddr);
+        // TODO-hw3
+        ReadAtVirtualMem(executable, noffH.initData.size, noffH.initData.virtualAddr, noffH.initData.inFileAddr);
+        // TODO-hw1 need to translate virtualAddr to PhyiscalAddr
+        //executable->ReadAt(
+	//	&(kernel->machine->mainMemory[VirtoPhys(noffH.initData.virtualAddr)]),
+	//		noffH.initData.size, noffH.initData.inFileAddr);
     }
 
     delete executable;			// close file
@@ -252,6 +315,8 @@ void AddrSpace::SaveState()
 {
         pageTable=kernel->machine->pageTable;
         numPages=kernel->machine->pageTableSize;
+        // TODO-hw3, pass swap table during context switch 
+        swapTable=kernel->machine->swapTable;
 }
 
 //----------------------------------------------------------------------
@@ -266,4 +331,6 @@ void AddrSpace::RestoreState()
 {
     kernel->machine->pageTable = pageTable;
     kernel->machine->pageTableSize = numPages;
+    // TODO-hw3, pass swap table during context switch 
+    kernel->machine->swapTable = swapTable;
 }
