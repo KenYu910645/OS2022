@@ -26,16 +26,16 @@ class AddrSpace {
     ~AddrSpace();			// De-allocate an address space
 
     void Execute(char *fileName);	// Run the the program
-					// stored in the file "executable"
+          // stored in the file "executable"
 
     void SaveState();			// Save/restore address space-specific
     void RestoreState();		// info on a context switch 
 
   private:
     TranslationEntry *pageTable;	// Assume linear page table translation
-					// for now!
+          // for now!
     unsigned int numPages;// Number of pages in the virtual 
-					// address space
+          // address space
     // TODO-hw3, record virtual pages swap sector 
     unsigned int threadID;
 
@@ -43,10 +43,10 @@ class AddrSpace {
     // int VirtoPhys(int virtualAddr);     // Translate virtual address to phyiscal 
        
     bool Load(char *fileName);		// Load the program into memory
-					// return false if not found
+          // return false if not found
 
     void InitRegisters();		// Initialize user-level CPU registers,
-					// before jumping to user code
+          // before jumping to user code
     // TODO-hw3, load segment in virtual memory
     void ReadAtVirtualMem(OpenFile* executable, int segmentSize, int baseVirtualAddr, int inFileAddr);
     

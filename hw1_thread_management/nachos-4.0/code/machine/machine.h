@@ -28,7 +28,7 @@
 // Definitions related to the size, and format of user memory
 
 const unsigned int PageSize = 128; 		// set the page size equal to
-					// the disk sector size, for simplicity
+                    // the disk sector size, for simplicity
 
 const unsigned int NumPhysPages = 32;
 const int MemorySize = (NumPhysPages * PageSize);
@@ -39,19 +39,19 @@ const unsigned int MaxNumSwapPage = 4096;
 const unsigned int MaxNumThread   = 8;
 
 enum ExceptionType { NoException,           // Everything ok!
-		     SyscallException,      // A program executed a system call.
-		     PageFaultException,    // No valid translation found
-		     ReadOnlyException,     // Write attempted to page marked 
-					    // "read-only"
-		     BusErrorException,     // Translation resulted in an 
-					    // invalid physical address
-		     AddressErrorException, // Unaligned reference or one that
-					    // was beyond the end of the
-					    // address space
-		     OverflowException,     // Integer overflow in add or sub.
-		     IllegalInstrException, // Unimplemented or reserved instr.
-		     
-		     NumExceptionTypes
+             SyscallException,      // A program executed a system call.
+             PageFaultException,    // No valid translation found
+             ReadOnlyException,     // Write attempted to page marked 
+                        // "read-only"
+             BusErrorException,     // Translation resulted in an 
+                        // invalid physical address
+             AddressErrorException, // Unaligned reference or one that
+                        // was beyond the end of the
+                        // address space
+             OverflowException,     // Integer overflow in add or sub.
+             IllegalInstrException, // Unimplemented or reserved instr.
+             
+             NumExceptionTypes
 };
 
 // User program CPU state.  The full set of MIPS registers, plus a few
@@ -75,20 +75,20 @@ enum ExceptionType { NoException,           // Everything ok!
 
 //TODO-hw3, declare PhysicalFrameEntry and FrameTable to keep track of status of physical memory
 class PhysicalFrameEntry{
-	public:
-		bool refBit; // for LRU algorithm
-		int useThreadID; // Which thread is using this frame?
-		int virtualPageNum; // which Virtual Page number is link to this frame. note that phyical frame and memory page is currently one-to-one
+    public:
+        bool refBit; // for LRU algorithm
+        int useThreadID; // Which thread is using this frame?
+        int virtualPageNum; // which Virtual Page number is link to this frame. note that phyical frame and memory page is currently one-to-one
 };
 class FrameTable{
-	public:
-		FrameTable();
-		int getVictim(); // get frame number of a victim frame 
-		int getNumFreeFrame(); // Return number of free frame in the memory
-		int getFreeFrameNum(); // Return a random free frame number
-		//
-		PhysicalFrameEntry t[NumPhysPages];
-		unsigned int LRU_ptr;
+    public:
+        FrameTable();
+        int getVictim(); // get frame number of a victim frame 
+        int getNumFreeFrame(); // Return number of free frame in the memory
+        int getFreeFrameNum(); // Return a random free frame number
+        //
+        PhysicalFrameEntry t[NumPhysPages];
+        unsigned int LRU_ptr;
 };
 
 // The following class defines the simulated host workstation hardware, as 
@@ -110,7 +110,7 @@ class Interrupt;
 class Machine {
   public:
     Machine(bool debug);	// Initialize the simulation of the hardware
-				// for running user programs
+                // for running user programs
     ~Machine();			// De-allocate the data structures
 
 // Routines callable by the Nachos kernel
@@ -119,7 +119,7 @@ class Machine {
     int ReadRegister(int num);	// read the contents of a CPU register
 
     void WriteRegister(int num, int value);
-				// store a value into a CPU register
+                // store a value into a CPU register
 
 // Data structures accessible to the Nachos kernel -- main memory and the
 // page table/TLB.
@@ -128,7 +128,7 @@ class Machine {
 // are in terms of these data structures (plus the CPU registers).
 
     char *mainMemory;		// physical memory to store user program,
-				// code and data, while executing
+                // code and data, while executing
 
 // NOTE: the hardware translation of virtual addresses in the user program
 // to physical addresses (relative to the beginning of "mainMemory")
@@ -149,43 +149,44 @@ class Machine {
 // the contents of the TLB are free to be modified by the kernel software.
 
     TranslationEntry *tlb;		// this pointer should be considered 
-					// "read-only" to Nachos kernel code
-	// Current thread's pageTable
+                    // "read-only" to Nachos kernel code
+    // Current thread's pageTable
     TranslationEntry *pageTable;
     unsigned int pageTableSize;
     bool ReadMem(int addr, int size, int* value);
 
     // TODO-hw3
-	FrameTable frameTable; // Use frameTable to keep track of physical frame status
-	TranslationEntry *pageTableAll[MaxNumThread]; // record all pageTable in all threads
+    FrameTable frameTable; // Use frameTable to keep track of physical frame status
+    TranslationEntry *pageTableAll[MaxNumThread]; // record all pageTable in all threads
     bool isSwapDiskUsed[MaxNumSwapPage]; // maintain table for swapDisk table
-	int getFreeDiskSect();
+    int threadID; // which thread is running now
+    int getFreeDiskSect();
 
   private:
 
 // Routines internal to the machine simulation -- DO NOT call these directly
     void DelayedLoad(int nextReg, int nextVal);  	
-				// Do a pending delayed load (modifying a reg)
+                // Do a pending delayed load (modifying a reg)
 
     void OneInstruction(Instruction *instr); 	
-    				// Run one instruction of a user program.
+                    // Run one instruction of a user program.
     
 //    bool ReadMem(int addr, int size, int* value);
     bool WriteMem(int addr, int size, int value);
-    				// Read or write 1, 2, or 4 bytes of virtual 
-				// memory (at addr).  Return FALSE if a 
-				// correct translation couldn't be found.
+                    // Read or write 1, 2, or 4 bytes of virtual 
+                // memory (at addr).  Return FALSE if a 
+                // correct translation couldn't be found.
 
     ExceptionType Translate(int virtAddr, int* physAddr, int size,bool writing);
-    				// Translate an address, and check for 
-				// alignment.  Set the use and dirty bits in 
-				// the translation entry appropriately,
-    				// and return an exception code if the 
-				// translation couldn't be completed.
+                    // Translate an address, and check for 
+                // alignment.  Set the use and dirty bits in 
+                // the translation entry appropriately,
+                    // and return an exception code if the 
+                // translation couldn't be completed.
 
     void RaiseException(ExceptionType which, int badVAddr);
-				// Trap to the Nachos kernel, because of a
-				// system call or other exception.  
+                // Trap to the Nachos kernel, because of a
+                // system call or other exception.  
 
     void Debugger();		// invoke the user program debugger
     void DumpState();		// print the user CPU and memory state 
@@ -196,17 +197,17 @@ class Machine {
     int registers[NumTotalRegs]; // CPU registers, for executing user programs
 
     bool singleStep;		// drop back into the debugger after each
-				// simulated instruction
+                // simulated instruction
     int runUntilTime;		// drop back into the debugger when simulated
-				// time reaches this value
+                // time reaches this value
 
  friend class Interrupt;		// calls DelayedLoad()    
 };
 
 extern void ExceptionHandler(ExceptionType which);
-				// Entry point into Nachos for handling
-				// user system calls and exceptions
-				// Defined in exception.cc
+                // Entry point into Nachos for handling
+                // user system calls and exceptions
+                // Defined in exception.cc
 
 
 // Routines for converting Words and Short Words to and from the

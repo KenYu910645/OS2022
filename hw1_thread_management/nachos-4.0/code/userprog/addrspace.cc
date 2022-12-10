@@ -90,13 +90,13 @@ AddrSpace::~AddrSpace()
 {
     // TODO-hw1, release physical pages that were occupied by this thread
     for (unsigned int i = 0; i < numPages; i++) {
-      	if (kernel->machine->frameTable.t[pageTable[i].physicalPage].useThreadID == threadID){
+          if (kernel->machine->frameTable.t[pageTable[i].physicalPage].useThreadID == threadID){
             kernel->machine->frameTable.t[pageTable[i].physicalPage].useThreadID = -1;
         }
     }
     // TODO-hw3, release disk pages that were occupied by this thread
     for (unsigned int i = 0; i < numPages; i++) {
-      	if (kernel->machine->isSwapDiskUsed[pageTable[i].swapSectorId]){
+          if (kernel->machine->isSwapDiskUsed[pageTable[i].swapSectorId]){
             kernel->machine->isSwapDiskUsed[pageTable[i].swapSectorId] = false;
         }
     }
@@ -122,7 +122,7 @@ void AddrSpace::ReadAtVirtualMem(OpenFile* executable, int segmentSize, int base
 
             // load page to memory
             executable->ReadAt(&(kernel->machine->mainMemory[freeFrameNum*PageSize]), 
-	      		               PageSize,
+                                 PageSize,
                                inFileAddr + i*PageSize);
             
             // Update pageTable
@@ -143,7 +143,7 @@ void AddrSpace::ReadAtVirtualMem(OpenFile* executable, int segmentSize, int base
             
             //load page content in buffer
             executable->ReadAt(buffer, 
-			                   PageSize,
+                               PageSize,
                                inFileAddr + i*PageSize);
             
             // find a free disk sector for virtual memory
@@ -182,19 +182,19 @@ AddrSpace::Load(char *fileName)
     unsigned int size;
 
     if (executable == NULL) {
-	cerr << "Unable to open file " << fileName << "\n";
-	return FALSE;
+    cerr << "Unable to open file " << fileName << "\n";
+    return FALSE;
     }
     executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
     if ((noffH.noffMagic != NOFFMAGIC) && 
-		(WordToHost(noffH.noffMagic) == NOFFMAGIC))
-    	SwapHeader(&noffH);
+        (WordToHost(noffH.noffMagic) == NOFFMAGIC))
+        SwapHeader(&noffH);
     ASSERT(noffH.noffMagic == NOFFMAGIC);
 
     // how big is address space?
     size = noffH.code.size + noffH.initData.size + noffH.uninitData.size 
-			+ UserStackSize;	// we need to increase the size
-						// to leave room for the stack
+            + UserStackSize;	// we need to increase the size
+                        // to leave room for the stack
     numPages = divRoundUp(size, PageSize);
     //cout << "number of pages of " << fileName<< " is "<<numPages<<endl;
     //cout << "noffH.code.size = " << noffH.code.size << endl;
@@ -215,25 +215,25 @@ AddrSpace::Load(char *fileName)
     DEBUG(dbgAddr, "Initializing address space: " << numPages << ", " << size);
 
 // then, copy in the code and data segments into memory
-	if (noffH.code.size > 0) {
+    if (noffH.code.size > 0) {
         DEBUG(dbgAddr, "Initializing code segment.");
-	DEBUG(dbgAddr, noffH.code.virtualAddr << ", " << noffH.code.size);
+    DEBUG(dbgAddr, noffH.code.virtualAddr << ", " << noffH.code.size);
         // TODO-hw3
         ReadAtVirtualMem(executable, noffH.code.size, noffH.code.virtualAddr, noffH.code.inFileAddr);
         // TODO-hw1 need to translate virtualAddr to PhyiscalAddr
         //executable->ReadAt(
-	//	&(kernel->machine->mainMemory[VirtoPhys(noffH.code.virtualAddr)]), 
+    //	&(kernel->machine->mainMemory[VirtoPhys(noffH.code.virtualAddr)]), 
         //			noffH.code.size, noffH.code.inFileAddr);
     }
-	if (noffH.initData.size > 0) {
+    if (noffH.initData.size > 0) {
         DEBUG(dbgAddr, "Initializing data segment.");
-	DEBUG(dbgAddr, noffH.initData.virtualAddr << ", " << noffH.initData.size);
+    DEBUG(dbgAddr, noffH.initData.virtualAddr << ", " << noffH.initData.size);
         // TODO-hw3
         ReadAtVirtualMem(executable, noffH.initData.size, noffH.initData.virtualAddr, noffH.initData.inFileAddr);
         // TODO-hw1 need to translate virtualAddr to PhyiscalAddr
         //executable->ReadAt(
-	//	&(kernel->machine->mainMemory[VirtoPhys(noffH.initData.virtualAddr)]),
-	//		noffH.initData.size, noffH.initData.inFileAddr);
+    //	&(kernel->machine->mainMemory[VirtoPhys(noffH.initData.virtualAddr)]),
+    //		noffH.initData.size, noffH.initData.inFileAddr);
     }
 
     delete executable;			// close file
@@ -252,8 +252,8 @@ void
 AddrSpace::Execute(char *fileName) 
 {
     if (!Load(fileName)) {
-	cout << "inside !Load(FileName)" << endl;
-	return;				// executable not found
+    cout << "inside !Load(FileName)" << endl;
+    return;				// executable not found
     }
 
     //kernel->currentThread->space = this;
@@ -263,8 +263,8 @@ AddrSpace::Execute(char *fileName)
     kernel->machine->Run();		// jump to the user progam
 
     ASSERTNOTREACHED();			// machine->Run never returns;
-					// the address space exits
-					// by doing the syscall "exit"
+                    // the address space exits
+                    // by doing the syscall "exit"
 }
 
 
@@ -285,7 +285,7 @@ AddrSpace::InitRegisters()
     int i;
 
     for (i = 0; i < NumTotalRegs; i++)
-	machine->WriteRegister(i, 0);
+    machine->WriteRegister(i, 0);
 
     // Initial program counter -- must be location of "Start"
     machine->WriteRegister(PCReg, 0);	
@@ -327,4 +327,6 @@ void AddrSpace::RestoreState()
 {
     kernel->machine->pageTable = pageTable;
     kernel->machine->pageTableSize = numPages;
+    // TODO-hw3, tell machine which thread is running now
+    kernel->machine->threadID = threadID;
 }
