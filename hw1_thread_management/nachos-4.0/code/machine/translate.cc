@@ -211,7 +211,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
         DEBUG(dbgAddr, "Illegal virtual page # " << virtAddr);
         return AddressErrorException;
     } else if (!pageTable[vpn].valid) {
-            cout << "[translate.cc] access invalid page, vpn = " << vpn << endl; 
+            // cout << "[translate.cc] access invalid page, vpn = " << vpn << endl; 
             // DEBUG(dbgAddr, "Invalid virtual page # " << virtAddr);
             // return PageFaultException;
             // TODO-hw3, implement replacement algorithm

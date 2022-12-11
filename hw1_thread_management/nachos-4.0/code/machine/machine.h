@@ -27,16 +27,16 @@
 
 // Definitions related to the size, and format of user memory
 
-const unsigned int PageSize = 128; 		// set the page size equal to
-                    // the disk sector size, for simplicity
+const unsigned int PageSize = 128; // set the page size equal to
+                                   // the disk sector size, for simplicity
 
 const unsigned int NumPhysPages = 32;
 const int MemorySize = (NumPhysPages * PageSize);
-const int TLBSize = 4;			// if there is a TLB, make it small
+const int TLBSize = 4; // if there is a TLB, make it small
 
 // TODO-hw3
 const unsigned int MaxNumSwapPage = 4096; // Create 4096 disk sectors for virtual memory in maximum 
-const unsigned int MaxNumThread   = 8; // Allow 8 threads sharing the physical memory at maximum
+const unsigned int MaxNumThread   = 8;    // Allow 8 threads sharing the physical memory at maximum
 
 enum ExceptionType { NoException,           // Everything ok!
              SyscallException,      // A program executed a system call.
@@ -76,20 +76,20 @@ enum ExceptionType { NoException,           // Everything ok!
 //TODO-hw3, declare PhysicalFrameEntry and FrameTable to keep track of status of physical memory
 class PhysicalFrameEntry{
     public:
-        bool refBit; // For second chance LRU algorithm
-        int useThreadID; // Record which thread is using this frame
+        bool refBit;        // For second chance LRU algorithm
+        int useThreadID;    // Record which thread is using this frame
         int virtualPageNum; // which virtual page number is link to this frame
                             // note that phyical frame and memory page is currently one-to-one mapping
 };
 class FrameTable{
     public:
         FrameTable();
-        int getVictim(); // get frame number of a victim frame 
+        int getVictim();       // get frame number of a victim frame 
         int getNumFreeFrame(); // Return number of free frame in the memory
         int getFreeFrameNum(); // Return a random free frame number
         //
         PhysicalFrameEntry t[NumPhysPages]; // frameTable
-        unsigned int LRU_ptr; // a circular frame pointer for LRU implementation
+        unsigned int LRU_ptr;               // a circular frame pointer for LRU implementation
 };
 
 // The following class defines the simulated host workstation hardware, as 

@@ -113,7 +113,7 @@ void AddrSpace::ReadAtVirtualMem(OpenFile* executable, int segmentSize, int base
     // helper function to load code segment and init variable in virtual memory
     // load in page by page
     
-    cout << "[addresspace.cc] ReadAtVirtualMem claim " << divRoundUp(segmentSize, PageSize) << " pages" << endl;
+    cout << "[addrespace.cc] ReadAtVirtualMem claim " << divRoundUp(segmentSize, PageSize) << " pages" << endl;
     for (unsigned int i = 0; i < divRoundUp(segmentSize, PageSize); i++){
         int vpn = baseVirtualAddr/PageSize + i; // virtual page number
         // If there is enough memory for paging, claim a page for this thread
@@ -136,7 +136,7 @@ void AddrSpace::ReadAtVirtualMem(OpenFile* executable, int segmentSize, int base
             kernel->machine->frameTable.t[freeFrameNum].useThreadID = threadID;
             kernel->machine->frameTable.t[freeFrameNum].virtualPageNum = vpn;   
             
-            cout << "[addrespace.cc] vpn " << vpn << " map to frame " << freeFrameNum << endl;
+            // cout << "[addrespace.cc] vpn " << vpn << " map to frame " << freeFrameNum << endl;
         }
         else{ // invalid page load in virtual memory(SwapDisk)
             char* buffer = new char[PageSize];
@@ -158,7 +158,7 @@ void AddrSpace::ReadAtVirtualMem(OpenFile* executable, int segmentSize, int base
             // write page to disk(virtual memory)
             kernel->virMemDisk->WriteSector(sectorId, buffer);
             delete[] buffer;
-            cout << "[addrespace.cc] vpn " << vpn << " map to sector " << sectorId << endl;
+            // cout << "[addrespace.cc] vpn " << vpn << " map to sector " << sectorId << endl;
         }
     }
 }
@@ -183,7 +183,7 @@ AddrSpace::Load(char *fileName)
     if (executable == NULL) {
     cerr << "Unable to open file " << fileName << "\n";
     return FALSE;
-    }
+
     executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
     if ((noffH.noffMagic != NOFFMAGIC) && 
         (WordToHost(noffH.noffMagic) == NOFFMAGIC))
@@ -195,10 +195,10 @@ AddrSpace::Load(char *fileName)
             + UserStackSize;	// we need to increase the size
                         // to leave room for the stack
     numPages = divRoundUp(size, PageSize);
-    // cout << "noffH.code.size = " << noffH.code.size << endl;
-    // cout << "noffH.initData.size = " << noffH.initData.size << endl;
-    // cout << "noffH.uninitData.size = " << noffH.uninitData.size << endl;
-    // cout << "UserStackSize = " << UserStackSize << endl;
+    cout << "[addrespace.cc] code size = " << noffH.code.size << endl;
+    cout << "[addrespace.cc] initData size = " << noffH.initData.size << endl;
+    cout << "[addrespace.cc] uninitData size = " << noffH.uninitData.size << endl;
+    cout << "[addrespace.cc] UserStackSize = " << UserStackSize << endl;
     size = numPages * PageSize;
 
     // TODO-hw3
@@ -214,7 +214,7 @@ AddrSpace::Load(char *fileName)
 
     DEBUG(dbgAddr, "Initializing address space: " << numPages << ", " << size);
 
-// then, copy in the code and data segments into memory
+    // then, copy in the code and data segments into memory
     if (noffH.code.size > 0) {
         DEBUG(dbgAddr, "Initializing code segment.");
         DEBUG(dbgAddr, noffH.code.virtualAddr << ", " << noffH.code.size);
@@ -223,7 +223,7 @@ AddrSpace::Load(char *fileName)
 
         // TODO-hw1 need to translate virtualAddr to PhyiscalAddr
         //executable->ReadAt(
-    //	&(kernel->machine->mainMemory[VirtoPhys(noffH.code.virtualAddr)]), 
+        //	&(kernel->machine->mainMemory[VirtoPhys(noffH.code.virtualAddr)]), 
         //			noffH.code.size, noffH.code.inFileAddr);
     }
     if (noffH.initData.size > 0) {
@@ -231,8 +231,8 @@ AddrSpace::Load(char *fileName)
     DEBUG(dbgAddr, noffH.initData.virtualAddr << ", " << noffH.initData.size);
         // TODO-hw1 need to translate virtualAddr to PhyiscalAddr
         //executable->ReadAt(
-    //	&(kernel->machine->mainMemory[VirtoPhys(noffH.initData.virtualAddr)]),
-    //		noffH.initData.size, noffH.initData.inFileAddr);
+        //	&(kernel->machine->mainMemory[VirtoPhys(noffH.initData.virtualAddr)]),
+        //		noffH.initData.size, noffH.initData.inFileAddr);
     }
     delete executable;			// close file
     cout << "[addrespace.cc] Successfully initalize thread "<< threadID << " address space." << endl;
