@@ -60,7 +60,7 @@ UserProgKernel::Initialize(SchedulerType scheduler_type)
     machine = new Machine(debugUserProg);
     fileSystem = new FileSystem();
     // TODO-hw3, new a virtual memory disk for page swapping
-    virtualMemDisk = new SynchDisk("Virtual Memory");
+    virMemDisk = new SynchDisk("Virtual Memory");
 #ifdef FILESYS
     synchDisk = new SynchDisk("New SynchDisk");
 #endif // FILESYS

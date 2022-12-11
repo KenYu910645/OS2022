@@ -113,7 +113,7 @@ void
 Disk::ReadRequest(int sectorNumber, char* data)
 {
     int ticks = ComputeLatency(sectorNumber, FALSE);
-
+    
     ASSERT(!active);				// only one request at a time
     ASSERT((sectorNumber >= 0) && (sectorNumber < NumSectors));
     

@@ -38,7 +38,8 @@ class AddrSpace {
           // address space
     // TODO-hw3, record virtual pages swap sector 
     unsigned int threadID;
-
+    
+    bool pageTable_lock;
     // TODO-hw1
     // int VirtoPhys(int virtualAddr);     // Translate virtual address to phyiscal 
        

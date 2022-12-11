@@ -46,8 +46,7 @@ void CheckEndian()
 
 // TODO-hw3
 FrameTable::FrameTable(){
-    int i;
-    for (i = 0; i < NumPhysPages; i++){
+    for (int i = 0; i < NumPhysPages; i++){
         t[i].refBit = false; // 
         t[i].useThreadID = -1; // unassigned, -1 mean frame unused(it's a free frame)
         t[i].virtualPageNum = -1;// unassigned
@@ -57,11 +56,10 @@ FrameTable::FrameTable(){
 
 int 
 FrameTable::getNumFreeFrame(){
-    int i;
     int count = 0;
-    for (i = 0; i < NumPhysPages; i++){
+    for (int i = 0; i < NumPhysPages; i++){
         if (t[i].useThreadID == -1) 
-            count ++;
+            count++;
     }
     return count;
 }
@@ -80,7 +78,7 @@ FrameTable::getFreeFrameNum(){
 int 
 FrameTable::getVictim(){
     // Make sure there's no free frame
-    ASSERT(getFreeFrameNum() == 0);
+    ASSERT(getNumFreeFrame() == 0);
 
     // Random select victim
     // return (rand() % NumPhysPages);
@@ -90,7 +88,7 @@ FrameTable::getVictim(){
         if (t[LRU_ptr%NumPhysPages].refBit){
             // Update LRU reference bit
             t[LRU_ptr%NumPhysPages].refBit = false;
-            victim = LRU_ptr;
+            victim = LRU_ptr%NumPhysPages;
             LRU_ptr++;
             break;
         }
@@ -105,9 +103,9 @@ FrameTable::getVictim(){
 
 int 
 Machine::getFreeDiskSect(){
-    for (unsigned int j = 0; j < MaxNumSwapPage; j++){
-        if (not isSwapDiskUsed[j])
-            return j;
+    for (unsigned int i = 0; i < MaxNumSwapPage; i++){
+        if (not isSwapDiskUsed[i])
+            return i;
     }
     cout << "[ERROR] Can't find free disk sector for virtual memory!" << endl;
     return -1;

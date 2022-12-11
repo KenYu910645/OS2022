@@ -205,27 +205,20 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
     // from the virtual address
     vpn = (unsigned) virtAddr / PageSize;
     offset = (unsigned) virtAddr % PageSize;
-   
-    cout << "pageTableSize = " << pageTableSize << endl; 
     
     if (tlb == NULL) {		// => page table => vpn is index into table
     if (vpn >= pageTableSize) {
         DEBUG(dbgAddr, "Illegal virtual page # " << virtAddr);
         return AddressErrorException;
     } else if (!pageTable[vpn].valid) {
-            
-        // DEBUG(dbgAddr, "Invalid virtual page # " << virtAddr);
-        // return PageFaultException;
+            cout << "[translate.cc] access invalid page, vpn = " << vpn << endl; 
+            // DEBUG(dbgAddr, "Invalid virtual page # " << virtAddr);
+            // return PageFaultException;
             // TODO-hw3, implement replacement algorithm
             // swap page to free physical memory
             if (kernel->machine->frameTable.getNumFreeFrame() > 0){
                 // Find the free frame
                 int freeFrameNum = kernel->machine->frameTable.getFreeFrameNum();
-                // Claim this frame for this thread
-                kernel->machine->frameTable.t[freeFrameNum].useThreadID = kernel->machine->threadID;
-                kernel->machine->frameTable.t[freeFrameNum].virtualPageNum = vpn;
-                kernel->machine->frameTable.t[freeFrameNum].refBit      = false;
-
                 char* buffer;
                 buffer = new char[PageSize];
                 
@@ -235,16 +228,22 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
 
                 // Copy buffer's content to physical memory frame
                 bcopy(buffer, &mainMemory[freeFrameNum*PageSize], PageSize);
+                
+                // Update PageTable status
+                // Update frameTable
+                kernel->machine->frameTable.t[freeFrameNum].useThreadID = kernel->machine->threadID;
+                kernel->machine->frameTable.t[freeFrameNum].virtualPageNum = vpn;
+                kernel->machine->frameTable.t[freeFrameNum].refBit      = false;
+                // Update Swaptable
+                kernel->machine->isSwapDiskUsed[pageTable[vpn].swapSectorId] = true;
+
             }
             // Find a victim page to swap to disk
             else{
                 // Pick a victim frame via LRU second chance algorithm
                 int victim = kernel->machine->frameTable.getVictim();
-                
-                char* buffer1;
-                char* buffer2;
-                buffer1 = new char[PageSize];
-                buffer2 = new char[PageSize];
+                char* buffer1 = new char[PageSize];
+                char* buffer2 = new char[PageSize];
                 
                 // Copy victim page to buffer2
                 bcopy(&mainMemory[victim*PageSize], buffer2, PageSize);
@@ -254,13 +253,20 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
                 // Get victimSectID
                 int victimTid = kernel->machine->frameTable.t[victim].useThreadID;
                 int victimVPN = kernel->machine->frameTable.t[victim].virtualPageNum;
-                int victimSectID = kernel->machine->pageTableAll[victimTid][victimVPN].swapSectorId;
+                int victimSectID = pageTable[vpn].swapSectorId;
                 
                 // Write buffer2's content to victimSectID on disk
+                cout << "[translate.cc] swap victim frame " << victim << " to diskSect " << victimSectID << endl; 
+                cout << "[translate.cc] victimVPN = " << victimVPN << endl; 
+                // cout << "victimSectID = " << victimSectID << endl;
+                // cout << "victimVPN = " << victimVPN << endl;
+                // cout << "victimTid = " << victimTid << endl;
                 kernel->virMemDisk->WriteSector(victimSectID, buffer2);
-                // Write demanding swpage page to memory
+                // Write demanding page to memory
                 bcopy(buffer1, &mainMemory[victim*PageSize], PageSize);
-
+                delete[] buffer1;
+                delete[] buffer2;
+                
                 // Update tables status
                 // For this thread's pageTable
                 pageTable[vpn].valid = TRUE;
@@ -275,6 +281,9 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
                 kernel->machine->frameTable.t[victim].refBit = false;
                 kernel->machine->frameTable.t[victim].useThreadID = kernel->machine->threadID;
                 kernel->machine->frameTable.t[victim].virtualPageNum = vpn;
+                
+                // For system swapTable
+                kernel->machine->isSwapDiskUsed[victimSectID] = true;
             }
         }
         entry = &pageTable[vpn];
@@ -298,7 +307,8 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
         return ReadOnlyException;
     }
     pageFrame = entry->physicalPage;
-
+    // TODO-hw3, Turn off reference bit for accessing frame
+    kernel->machine->frameTable.t[pageFrame].refBit = false;
     // if the pageFrame is too big, there is something really wrong! 
     // An invalid translation was loaded into the page table or TLB. 
     if (pageFrame >= NumPhysPages) {

@@ -112,9 +112,10 @@ AddrSpace::~AddrSpace()
 void AddrSpace::ReadAtVirtualMem(OpenFile* executable, int segmentSize, int baseVirtualAddr, int inFileAddr){
     // helper function to load code segment and init variable in virtual memory
     // load in page by page
+    
+    cout << "[addresspace.cc] ReadAtVirtualMem claim " << divRoundUp(segmentSize, PageSize) << " pages" << endl;
     for (unsigned int i = 0; i < divRoundUp(segmentSize, PageSize); i++){
         int vpn = baseVirtualAddr/PageSize + i; // virtual page number
-
         // If there is enough memory for paging, claim a page for this thread
         if (kernel->machine->frameTable.getNumFreeFrame() > 0){
             // Find a free frame
@@ -124,7 +125,6 @@ void AddrSpace::ReadAtVirtualMem(OpenFile* executable, int segmentSize, int base
             executable->ReadAt(&(kernel->machine->mainMemory[freeFrameNum*PageSize]), 
                                  PageSize,
                                inFileAddr + i*PageSize);
-            
             // Update pageTable
             pageTable[vpn].virtualPage  = vpn;
             pageTable[vpn].physicalPage = freeFrameNum;
@@ -135,23 +135,13 @@ void AddrSpace::ReadAtVirtualMem(OpenFile* executable, int segmentSize, int base
             kernel->machine->frameTable.t[freeFrameNum].refBit = false;
             kernel->machine->frameTable.t[freeFrameNum].useThreadID = threadID;
             kernel->machine->frameTable.t[freeFrameNum].virtualPageNum = vpn;   
-
+            
+            cout << "[addrespace.cc] vpn " << vpn << " map to frame " << freeFrameNum << endl;
         }
         else{ // invalid page load in virtual memory(SwapDisk)
-            char* buffer;
-            buffer = new char[PageSize];
-            
-            //load page content in buffer
-            executable->ReadAt(buffer, 
-                               PageSize,
-                               inFileAddr + i*PageSize);
-            
+            char* buffer = new char[PageSize];
             // find a free disk sector for virtual memory
             int sectorId = kernel->machine->getFreeDiskSect();
-
-            // write page to disk(virtual memory)
-            kernel->virMemDisk->WriteSector(sectorId, buffer);
-
             // Update pageTable
             pageTable[vpn].virtualPage  = vpn;
             pageTable[vpn].physicalPage = -1;
@@ -160,6 +150,15 @@ void AddrSpace::ReadAtVirtualMem(OpenFile* executable, int segmentSize, int base
 
             // Update SectorTable
             kernel->machine->isSwapDiskUsed[sectorId] = true;
+            
+            //load page content in buffer
+            executable->ReadAt(buffer, 
+                               PageSize,
+                               inFileAddr + i*PageSize); 
+            // write page to disk(virtual memory)
+            kernel->virMemDisk->WriteSector(sectorId, buffer);
+            delete[] buffer;
+            cout << "[addrespace.cc] vpn " << vpn << " map to sector " << sectorId << endl;
         }
     }
 }
@@ -197,10 +196,10 @@ AddrSpace::Load(char *fileName)
                         // to leave room for the stack
     numPages = divRoundUp(size, PageSize);
     //cout << "number of pages of " << fileName<< " is "<<numPages<<endl;
-    //cout << "noffH.code.size = " << noffH.code.size << endl;
-    //cout << "noffH.initData.size = " << noffH.initData.size << endl;
-    //cout << "noffH.uninitData.size = " << noffH.uninitData.size << endl;
-    //cout << "UserStackSize = " << UserStackSize << endl;
+    cout << "noffH.code.size = " << noffH.code.size << endl;
+    cout << "noffH.initData.size = " << noffH.initData.size << endl;
+    cout << "noffH.uninitData.size = " << noffH.uninitData.size << endl;
+    cout << "UserStackSize = " << UserStackSize << endl;
     size = numPages * PageSize;
 
     // TODO-hw3
@@ -219,7 +218,8 @@ AddrSpace::Load(char *fileName)
         DEBUG(dbgAddr, "Initializing code segment.");
     DEBUG(dbgAddr, noffH.code.virtualAddr << ", " << noffH.code.size);
         // TODO-hw3
-        ReadAtVirtualMem(executable, noffH.code.size, noffH.code.virtualAddr, noffH.code.inFileAddr);
+        ReadAtVirtualMem(executable, size, noffH.code.virtualAddr, noffH.code.inFileAddr);
+        // ReadAtVirtualMem(executable, noffH.code.size, noffH.code.virtualAddr, noffH.code.inFileAddr);
         // TODO-hw1 need to translate virtualAddr to PhyiscalAddr
         //executable->ReadAt(
     //	&(kernel->machine->mainMemory[VirtoPhys(noffH.code.virtualAddr)]), 
@@ -229,14 +229,20 @@ AddrSpace::Load(char *fileName)
         DEBUG(dbgAddr, "Initializing data segment.");
     DEBUG(dbgAddr, noffH.initData.virtualAddr << ", " << noffH.initData.size);
         // TODO-hw3
-        ReadAtVirtualMem(executable, noffH.initData.size, noffH.initData.virtualAddr, noffH.initData.inFileAddr);
+        // ReadAtVirtualMem(executable, noffH.initData.size, noffH.initData.virtualAddr, noffH.initData.inFileAddr);
         // TODO-hw1 need to translate virtualAddr to PhyiscalAddr
         //executable->ReadAt(
     //	&(kernel->machine->mainMemory[VirtoPhys(noffH.initData.virtualAddr)]),
     //		noffH.initData.size, noffH.initData.inFileAddr);
     }
-
+    if (noffH.uninitData.size > 0) {
+        DEBUG(dbgAddr, "Initializing uninitData segment.");
+    DEBUG(dbgAddr, noffH.uninitData.virtualAddr << ", " << noffH.uninitData.size);
+        // TODO-hw3
+        // ReadAtVirtualMem(executable, noffH.uninitData.size, noffH.uninitData.virtualAddr, noffH.uninitData.inFileAddr);
+    }
     delete executable;			// close file
+    cout << "[addrespace.cc] Successfully initalize thread "<< threadID << " address space." << endl;
     return TRUE;			// success
 }
 
@@ -251,6 +257,8 @@ AddrSpace::Load(char *fileName)
 void 
 AddrSpace::Execute(char *fileName) 
 {
+    // TODO-hw3, acquire lock, prevent content swtich change the page table
+    pageTable_lock = true;
     if (!Load(fileName)) {
     cout << "inside !Load(FileName)" << endl;
     return;				// executable not found
@@ -259,7 +267,10 @@ AddrSpace::Execute(char *fileName)
     //kernel->currentThread->space = this;
     this->InitRegisters();		// set the initial register values
     this->RestoreState();		// load page table register
-
+    
+    // TODO-hw3, release lock
+    pageTable_lock = false;
+    
     kernel->machine->Run();		// jump to the user progam
 
     ASSERTNOTREACHED();			// machine->Run never returns;
@@ -311,8 +322,12 @@ AddrSpace::InitRegisters()
 
 void AddrSpace::SaveState() 
 {
+    // TODO-hw3, use lock to prevent OS override pageTable during Loading
+    if (!pageTable_lock){
         pageTable=kernel->machine->pageTable;
         numPages=kernel->machine->pageTableSize;
+    }
+    // cout << "Save State for "<< threadID << endl;   
 }
 
 //----------------------------------------------------------------------
@@ -329,4 +344,5 @@ void AddrSpace::RestoreState()
     kernel->machine->pageTableSize = numPages;
     // TODO-hw3, tell machine which thread is running now
     kernel->machine->threadID = threadID;
+    // cout << "Restore State for "<< threadID << endl;
 }
