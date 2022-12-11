@@ -56,13 +56,13 @@ SwapHeader (NoffHeader *noffH)
 
 AddrSpace::AddrSpace()
 {
-    // TODO-hw3, assign thread ID by thread Counter 
+    // TODO-hw3, assign thread ID to each thread by a static counter 
     static int threadCounter = 0;
     threadID = threadCounter;
     threadCounter++;
     cout << "Initializing thread AddrSpace, threadID = " << threadID << endl;
 
-    // initlize pageTable with MaxNumVirPage entry
+    // TODO-hw3, initlize pageTable with MaxNumVirPage entry
     pageTable = new TranslationEntry[MaxNumVirPage];
     for (unsigned int i = 0; i < MaxNumVirPage; i++) {
         pageTable[i].virtualPage = i;
@@ -195,11 +195,10 @@ AddrSpace::Load(char *fileName)
             + UserStackSize;	// we need to increase the size
                         // to leave room for the stack
     numPages = divRoundUp(size, PageSize);
-    //cout << "number of pages of " << fileName<< " is "<<numPages<<endl;
-    cout << "noffH.code.size = " << noffH.code.size << endl;
-    cout << "noffH.initData.size = " << noffH.initData.size << endl;
-    cout << "noffH.uninitData.size = " << noffH.uninitData.size << endl;
-    cout << "UserStackSize = " << UserStackSize << endl;
+    // cout << "noffH.code.size = " << noffH.code.size << endl;
+    // cout << "noffH.initData.size = " << noffH.initData.size << endl;
+    // cout << "noffH.uninitData.size = " << noffH.uninitData.size << endl;
+    // cout << "UserStackSize = " << UserStackSize << endl;
     size = numPages * PageSize;
 
     // TODO-hw3
@@ -208,18 +207,20 @@ AddrSpace::Load(char *fileName)
     
     // TODO-hw3, switch off physical Memory check 
     if (numPages > kernel->machine->frameTable.getNumFreeFrame()){
-        cout << "numPages larger than numFreePhyPage, except virtual memory implemented." << endl;
+        cout << "numPages larger than numFreePhyPage, expect virtual memory is implemented." << endl;
     }
+    // Make sure we have enough virtual address for this thread
     ASSERT(numPages <= MaxNumVirPage);
+
     DEBUG(dbgAddr, "Initializing address space: " << numPages << ", " << size);
 
 // then, copy in the code and data segments into memory
     if (noffH.code.size > 0) {
         DEBUG(dbgAddr, "Initializing code segment.");
-    DEBUG(dbgAddr, noffH.code.virtualAddr << ", " << noffH.code.size);
-        // TODO-hw3
+        DEBUG(dbgAddr, noffH.code.virtualAddr << ", " << noffH.code.size);
+        // TODO-hw3, initialize the adddress space of the whole thread in one go
         ReadAtVirtualMem(executable, size, noffH.code.virtualAddr, noffH.code.inFileAddr);
-        // ReadAtVirtualMem(executable, noffH.code.size, noffH.code.virtualAddr, noffH.code.inFileAddr);
+
         // TODO-hw1 need to translate virtualAddr to PhyiscalAddr
         //executable->ReadAt(
     //	&(kernel->machine->mainMemory[VirtoPhys(noffH.code.virtualAddr)]), 
@@ -228,18 +229,10 @@ AddrSpace::Load(char *fileName)
     if (noffH.initData.size > 0) {
         DEBUG(dbgAddr, "Initializing data segment.");
     DEBUG(dbgAddr, noffH.initData.virtualAddr << ", " << noffH.initData.size);
-        // TODO-hw3
-        // ReadAtVirtualMem(executable, noffH.initData.size, noffH.initData.virtualAddr, noffH.initData.inFileAddr);
         // TODO-hw1 need to translate virtualAddr to PhyiscalAddr
         //executable->ReadAt(
     //	&(kernel->machine->mainMemory[VirtoPhys(noffH.initData.virtualAddr)]),
     //		noffH.initData.size, noffH.initData.inFileAddr);
-    }
-    if (noffH.uninitData.size > 0) {
-        DEBUG(dbgAddr, "Initializing uninitData segment.");
-    DEBUG(dbgAddr, noffH.uninitData.virtualAddr << ", " << noffH.uninitData.size);
-        // TODO-hw3
-        // ReadAtVirtualMem(executable, noffH.uninitData.size, noffH.uninitData.virtualAddr, noffH.uninitData.inFileAddr);
     }
     delete executable;			// close file
     cout << "[addrespace.cc] Successfully initalize thread "<< threadID << " address space." << endl;
@@ -259,6 +252,7 @@ AddrSpace::Execute(char *fileName)
 {
     // TODO-hw3, acquire lock, prevent content swtich change the page table
     pageTable_lock = true;
+    
     if (!Load(fileName)) {
     cout << "inside !Load(FileName)" << endl;
     return;				// executable not found

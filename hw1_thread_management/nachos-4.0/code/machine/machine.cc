@@ -44,7 +44,8 @@ void CheckEndian()
 #endif
 }
 
-// TODO-hw3
+// TODO-hw3, implement FrameTable class method
+// Constructor. Initilize all frame table entry
 FrameTable::FrameTable(){
     for (int i = 0; i < NumPhysPages; i++){
         t[i].refBit = false; // 
@@ -54,6 +55,7 @@ FrameTable::FrameTable(){
     LRU_ptr = 0;
 }
 
+// Return number of free frame in physical memory
 int 
 FrameTable::getNumFreeFrame(){
     int count = 0;
@@ -64,6 +66,7 @@ FrameTable::getNumFreeFrame(){
     return count;
 }
 
+// Return a free frame number
 int 
 FrameTable::getFreeFrameNum(){
     int i;
@@ -75,17 +78,16 @@ FrameTable::getFreeFrameNum(){
     return -1;
 }
 
+// Return victim frame number via second chance LRU alrogithm
 int 
 FrameTable::getVictim(){
     // Make sure there's no free frame
     ASSERT(getNumFreeFrame() == 0);
 
-    // Random select victim
-    // return (rand() % NumPhysPages);
     // Second chance LRU algorithm
     int victim = -1;
     while (true){
-        if (t[LRU_ptr%NumPhysPages].refBit){
+        if (t[LRU_ptr%NumPhysPages].refBit){ // Found a victim page
             // Update LRU reference bit
             t[LRU_ptr%NumPhysPages].refBit = false;
             victim = LRU_ptr%NumPhysPages;
@@ -93,7 +95,7 @@ FrameTable::getVictim(){
             break;
         }
         else{
-            // Give the frame a second chance
+            // Give the frame a second chance and mark it
             t[LRU_ptr%NumPhysPages].refBit = true;
             LRU_ptr++;
         }
@@ -101,6 +103,7 @@ FrameTable::getVictim(){
     return victim;
 }
 
+// Return a free disk sector in virtual memory
 int 
 Machine::getFreeDiskSect(){
     for (unsigned int i = 0; i < MaxNumSwapPage; i++){
@@ -121,7 +124,7 @@ Machine::getFreeDiskSect(){
 
 Machine::Machine(bool debug)
 {
-    // TODO-hw3, initialize physical page
+    // TODO-hw3, initialize frameTable
     for (int i = 0; i < MaxNumSwapPage; i++)
         isSwapDiskUsed[i] = false;
     FrameTable frameTable = FrameTable();

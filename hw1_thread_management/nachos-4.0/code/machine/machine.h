@@ -35,8 +35,8 @@ const int MemorySize = (NumPhysPages * PageSize);
 const int TLBSize = 4;			// if there is a TLB, make it small
 
 // TODO-hw3
-const unsigned int MaxNumSwapPage = 4096;
-const unsigned int MaxNumThread   = 8;
+const unsigned int MaxNumSwapPage = 4096; // Create 4096 disk sectors for virtual memory in maximum 
+const unsigned int MaxNumThread   = 8; // Allow 8 threads sharing the physical memory at maximum
 
 enum ExceptionType { NoException,           // Everything ok!
              SyscallException,      // A program executed a system call.
@@ -76,9 +76,10 @@ enum ExceptionType { NoException,           // Everything ok!
 //TODO-hw3, declare PhysicalFrameEntry and FrameTable to keep track of status of physical memory
 class PhysicalFrameEntry{
     public:
-        bool refBit; // for LRU algorithm
-        int useThreadID; // Which thread is using this frame?
-        int virtualPageNum; // which Virtual Page number is link to this frame. note that phyical frame and memory page is currently one-to-one
+        bool refBit; // For second chance LRU algorithm
+        int useThreadID; // Record which thread is using this frame
+        int virtualPageNum; // which virtual page number is link to this frame
+                            // note that phyical frame and memory page is currently one-to-one mapping
 };
 class FrameTable{
     public:
@@ -87,8 +88,8 @@ class FrameTable{
         int getNumFreeFrame(); // Return number of free frame in the memory
         int getFreeFrameNum(); // Return a random free frame number
         //
-        PhysicalFrameEntry t[NumPhysPages];
-        unsigned int LRU_ptr;
+        PhysicalFrameEntry t[NumPhysPages]; // frameTable
+        unsigned int LRU_ptr; // a circular frame pointer for LRU implementation
 };
 
 // The following class defines the simulated host workstation hardware, as 
@@ -150,6 +151,7 @@ class Machine {
 
     TranslationEntry *tlb;		// this pointer should be considered 
                     // "read-only" to Nachos kernel code
+    
     // Current thread's pageTable
     TranslationEntry *pageTable;
     unsigned int pageTableSize;
@@ -158,9 +160,9 @@ class Machine {
     // TODO-hw3
     FrameTable frameTable; // Use frameTable to keep track of physical frame status
     TranslationEntry *pageTableAll[MaxNumThread]; // record all pageTable in all threads
-    bool isSwapDiskUsed[MaxNumSwapPage]; // maintain table for swapDisk table
-    int threadID; // which thread is running now
-    int getFreeDiskSect();
+    bool isSwapDiskUsed[MaxNumSwapPage]; // maintain swapTable for virtual memory disk
+    int threadID; // record which thread is running now
+    int getFreeDiskSect(); // Return free disk sector number in virtual memory 
 
   private:
 

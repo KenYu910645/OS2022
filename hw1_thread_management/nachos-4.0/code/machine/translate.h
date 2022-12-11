@@ -31,7 +31,7 @@ class TranslationEntry {
   public:
     unsigned int virtualPage;  	// The page number in virtual memory.
     unsigned int physicalPage;  // The page number in real memory (relative to the
-    // TODO-hw3
+    // TODO-hw3, record which disk sector did the page been swapped to
     int swapSectorId; // if virtual memory is used, store the disk sector id that save this page 
       //  start of "mainMemory"
     bool valid;         // If this bit is set, the translation is ignored.

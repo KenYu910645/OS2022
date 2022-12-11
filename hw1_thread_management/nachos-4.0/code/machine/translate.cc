@@ -219,21 +219,20 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
             if (kernel->machine->frameTable.getNumFreeFrame() > 0){
                 // Find the free frame
                 int freeFrameNum = kernel->machine->frameTable.getFreeFrameNum();
-                char* buffer;
-                buffer = new char[PageSize];
+                char* buffer = new char[PageSize];
                 
                 // Copy sector's content to buffer
-                // kernel->virMemDisk->ReadSector(kernel->machine->swapTable[vpn], buffer);
                 kernel->virMemDisk->ReadSector(pageTable[vpn].swapSectorId, buffer);
 
                 // Copy buffer's content to physical memory frame
                 bcopy(buffer, &mainMemory[freeFrameNum*PageSize], PageSize);
-                
-                // Update PageTable status
+                delete[] buffer;
+
                 // Update frameTable
                 kernel->machine->frameTable.t[freeFrameNum].useThreadID = kernel->machine->threadID;
                 kernel->machine->frameTable.t[freeFrameNum].virtualPageNum = vpn;
                 kernel->machine->frameTable.t[freeFrameNum].refBit      = false;
+                
                 // Update Swaptable
                 kernel->machine->isSwapDiskUsed[pageTable[vpn].swapSectorId] = true;
 
@@ -247,6 +246,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
                 
                 // Copy victim page to buffer2
                 bcopy(&mainMemory[victim*PageSize], buffer2, PageSize);
+                
                 // Copy demanding swap page to buffer1
                 kernel->virMemDisk->ReadSector(pageTable[vpn].swapSectorId, buffer1);
 
@@ -254,35 +254,34 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
                 int victimTid = kernel->machine->frameTable.t[victim].useThreadID;
                 int victimVPN = kernel->machine->frameTable.t[victim].virtualPageNum;
                 int victimSectID = pageTable[vpn].swapSectorId;
-                
+                // cout << "[translate.cc] swap victim frame " << victim << " to diskSect " << victimSectID << endl; 
+                // cout << "[translate.cc] victimVPN = " << victimVPN << endl;
+
                 // Write buffer2's content to victimSectID on disk
-                cout << "[translate.cc] swap victim frame " << victim << " to diskSect " << victimSectID << endl; 
-                cout << "[translate.cc] victimVPN = " << victimVPN << endl; 
-                // cout << "victimSectID = " << victimSectID << endl;
-                // cout << "victimVPN = " << victimVPN << endl;
-                // cout << "victimTid = " << victimTid << endl;
                 kernel->virMemDisk->WriteSector(victimSectID, buffer2);
+                
                 // Write demanding page to memory
                 bcopy(buffer1, &mainMemory[victim*PageSize], PageSize);
+                
                 delete[] buffer1;
                 delete[] buffer2;
                 
-                // Update tables status
-                // For this thread's pageTable
+                // 
+                // Update executing thread's pageTable
                 pageTable[vpn].valid = TRUE;
                 pageTable[vpn].physicalPage = victim;
 
-                // For the victim thread's pageTable
+                // Update victim thread's pageTable
                 kernel->machine->pageTableAll[victimTid][victimVPN].valid = FALSE;
                 kernel->machine->pageTableAll[victimTid][victimVPN].physicalPage = -1;
                 kernel->machine->pageTableAll[victimTid][victimVPN].swapSectorId = victimSectID;
                 
-                // For system frameTable
+                // Update frameTable
                 kernel->machine->frameTable.t[victim].refBit = false;
                 kernel->machine->frameTable.t[victim].useThreadID = kernel->machine->threadID;
                 kernel->machine->frameTable.t[victim].virtualPageNum = vpn;
                 
-                // For system swapTable
+                // Update system swapTable
                 kernel->machine->isSwapDiskUsed[victimSectID] = true;
             }
         }
@@ -309,6 +308,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
     pageFrame = entry->physicalPage;
     // TODO-hw3, Turn off reference bit for accessing frame
     kernel->machine->frameTable.t[pageFrame].refBit = false;
+    
     // if the pageFrame is too big, there is something really wrong! 
     // An invalid translation was loaded into the page table or TLB. 
     if (pageFrame >= NumPhysPages) {
